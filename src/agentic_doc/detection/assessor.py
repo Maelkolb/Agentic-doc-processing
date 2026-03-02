@@ -12,16 +12,6 @@ from PIL import Image
 _MIME_BY_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
 
 
-def _validate_image_path(image_path: str) -> None:
-    """Validate that the image path exists and is readable."""
-    if not os.path.isfile(image_path):
-        raise FileNotFoundError(
-            f"Image file not found: {image_path}. "
-            f"Check that the file exists and the path is correct. "
-            f"Directory contents of '{os.path.dirname(image_path) or '.'}': "
-            f"{os.listdir(os.path.dirname(image_path) or '.')[:20]}"
-        )
-
 
 def _load_image_pil(image_path: str) -> Image.Image:
     """Load image with PIL (more robust than cv2 for various formats)."""
@@ -152,6 +142,7 @@ Return ONLY valid JSON, no markdown."""
                 ],
                 config=types.GenerateContentConfig(
                     temperature=1.0,
+                    thinking_config=types.ThinkingConfig(thinking_level="low"),
                 ),
             )
             response_text = response.text.strip()
@@ -173,7 +164,6 @@ Return ONLY valid JSON, no markdown."""
             }
 
     def assess(self, image_path: str) -> Dict[str, Any]:
-        _validate_image_path(image_path)
         quality_metrics = self._analyze_image_quality(image_path)
         content_analysis = self._analyze_content(image_path)
         preprocessors = []

@@ -35,7 +35,7 @@ def build_agent(
     if not api_key:
         raise ValueError("GOOGLE_API_KEY not set. Set it in env or pass config with GOOGLE_API_KEY.")
     agent_model = cfg.get("AGENT_MODEL", "gemini-2.0-flash")
-    vision_model = cfg.get("VISION_MODEL", "gemini-2.0-flash")
+    vision_model = cfg.get("VISION_MODEL", "gemini-3-flash-preview")
     use_layout_fallback = cfg.get("USE_LAYOUT_FALLBACK", False)
 
     if state is None:

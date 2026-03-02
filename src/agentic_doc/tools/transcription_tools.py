@@ -1,7 +1,6 @@
 """Transcription tools: get_transcription_plan, transcribe_with_*, compile_transcription."""
 
 import json
-import os
 from typing import Optional
 
 import numpy as np
@@ -89,8 +88,6 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
         image_path = state.current_image_path
         if not image_path:
             return json.dumps({"status": "error", "error": "No image path in state."})
-        if not os.path.isfile(image_path):
-            return json.dumps({"status": "error", "error": f"File not found: {image_path}"})
         image = Image.open(image_path).convert("RGB")
         lines = region.get("lines", [])
         lang_list = [s.strip() for s in (languages or "german,latin").split(",")]
@@ -116,8 +113,6 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
         image_path = state.current_image_path
         if not image_path:
             return json.dumps({"status": "error", "error": "No image path."})
-        if not os.path.isfile(image_path):
-            return json.dumps({"status": "error", "error": f"File not found: {image_path}"})
         image = Image.open(image_path).convert("RGB")
         lines = region.get("lines", [])
         result = trocr_htr.transcribe_lines(image, lines, model or "handwritten")
@@ -143,8 +138,6 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
         image_path = state.current_image_path
         if not image_path:
             return json.dumps({"status": "error", "error": "No image path."})
-        if not os.path.isfile(image_path):
-            return json.dumps({"status": "error", "error": f"File not found: {image_path}"})
         image = Image.open(image_path).convert("RGB")
         bbox = region.get("bbox", {})
         x, y = bbox.get("x", 0), bbox.get("y", 0)
