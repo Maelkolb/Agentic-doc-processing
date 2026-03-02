@@ -21,15 +21,64 @@ LangChain/LangGraph-powered document processing pipeline: assessment, region det
    pip install -e ".[tesseract,trocr]"
    ```
 
-2. **Environment**
+2. **Google Colab**
+
+   Run this **first** in a Colab cell so `agentic_doc` is importable (clone + install the package):
+
+   ```python
+   # Clone (skip if you already uploaded the repo or cloned elsewhere)
+   !git clone https://github.com/YOUR_USER/Agentic-doc-processing.git
+   %cd Agentic-doc-processing
+
+   # Install the package so "import agentic_doc" works
+   !pip install -e .
+
+   # If you still get "No module named 'agentic_doc'" after install, add src to path (run before imports):
+   import sys, os
+   repo = os.getcwd()  # must be the repo root (Agentic-doc-processing)
+   sys.path.insert(0, os.path.join(repo, "src"))
+
+   # Optional: set Gemini API key from Colab Secrets (Secret name: GEMINI_API_KEY)
+   # from google.colab import userdata
+   # os.environ["GOOGLE_API_KEY"] = userdata.get("GEMINI_API_KEY")
+   ```
+
+   Then in the next cell you can use either headless `invoke` or the GUI:
+
+   ```python
+   from langchain_core.messages import HumanMessage
+   from agentic_doc.agent import build_agent
+   from agentic_doc.agent.callbacks import StreamingAgentCallback
+
+   image_path = "/content/0030_laubmannnl_00030-20250717_102644_right.jpg"
+   agent, state, logger = build_agent()
+   callback = StreamingAgentCallback(logger)
+   config = {"configurable": {"callbacks": [callback]}}
+
+   result = agent.invoke(
+       {"messages": [HumanMessage(content=f"Process this document image completely: {image_path}. "
+           "Follow the full pipeline: assess, enhance if recommended, detect regions, detect lines, "
+           "get transcription plan, transcribe every text region (use transcribe_with_llm for tables and images), "
+           "compile transcription, then export to PageXML, Markdown, and HTML. Use the image path exactly as given for all tool calls.")]},
+       config=config,
+   )
+   if result and "messages" in result:
+       print(result["messages"][-1].content)
+   ```
+
+   Or with the live GUI: `from agentic_doc.gui import run_with_gui` then `run_with_gui(agent, state, logger, image_path)`.
+
+3. **Environment**
 
    Copy `.env.example` to `.env` and set:
 
    - `GOOGLE_API_KEY` (required for Gemini)
 
+   In Colab you can set `GOOGLE_API_KEY` in the environment or use Colab Secrets (e.g. `userdata.get("GEMINI_API_KEY")`); the package reads it via `config.load_config()`.
+
    Optional: `USE_LAYOUT_FALLBACK=true` to use Surya Layout when line detection returns no bboxes; `DETECTOR_BATCH_SIZE`, `DETECTOR_BLANK_THRESHOLD`, `DETECTOR_TEXT_THRESHOLD` for Surya tuning.
 
-3. **Run**
+4. **Run**
 
    ```bash
    python main.py path/to/document.png

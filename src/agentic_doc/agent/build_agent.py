@@ -75,11 +75,11 @@ def build_agent(
         google_api_key=api_key,
     )
 
-    # Prefer create_agent from langchain.agents (new API), fallback to langgraph create_react_agent
+    # Prefer create_agent from langchain.agents (system_prompt=), fallback to langgraph create_react_agent (prompt=)
     try:
         from langchain.agents import create_agent
-        agent_executor = create_agent(llm, tools, prompt=SYSTEM_PROMPT)
-    except ImportError:
+        agent_executor = create_agent(llm, tools, system_prompt=SYSTEM_PROMPT)
+    except (ImportError, TypeError):
         from langgraph.prebuilt import create_react_agent
         agent_executor = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
 
