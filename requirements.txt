@@ -1,0 +1,14 @@
+langchain-core
+langchain-google-genai
+langgraph
+google-genai>=1.0.0
+surya-ocr==0.17.0
+Pillow
+opencv-python-headless
+matplotlib
+numpy
+pytesseract
+pydantic
+jupyter
+notebook
+ipykernel
