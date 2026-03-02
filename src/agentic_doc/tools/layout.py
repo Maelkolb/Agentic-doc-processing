@@ -17,8 +17,6 @@ def get_layout_tools(state, logger, region_detector, line_detector, visualizer):
         Returns JSON with regions, bboxes, reading_order.
         Can also be called directly if assess_document failed (uses PIL, not cv2)."""
         logger.info(f"Detecting regions in: {image_path}")
-        if not os.path.isfile(image_path):
-            return json.dumps({"status": "error", "error": f"File not found: {image_path}"})
         # Update state if this is the first tool to set the image path
         if not state.image_path:
             state.image_path = image_path
@@ -45,8 +43,6 @@ def get_layout_tools(state, logger, region_detector, line_detector, visualizer):
         """STEP 4: Detect text lines within each region using Surya. Must be called AFTER detect_regions.
         Returns JSON with regions updated to include line polygons and line counts."""
         logger.info(f"Detecting lines in: {image_path}")
-        if not os.path.isfile(image_path):
-            return json.dumps({"status": "error", "error": f"File not found: {image_path}"})
         regions = None
         if regions_json:
             try:

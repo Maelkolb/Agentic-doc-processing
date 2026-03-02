@@ -41,9 +41,6 @@ class RegionDetector:
     def detect_and_classify(
         self, image_path: str, document_context: Dict = None
     ) -> Dict[str, Any]:
-        if not os.path.isfile(image_path):
-            return {"status": "error", "error": f"File not found: {image_path}"}
-
         from google.genai import types
 
         image = Image.open(image_path).convert("RGB")
