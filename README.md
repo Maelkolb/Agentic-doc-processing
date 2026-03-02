@@ -36,7 +36,21 @@ LangChain/LangGraph-powered document processing pipeline: assessment, region det
    python main.py path/to/document.png --no-gui
    ```
 
-   Or use as a package:
+   With GUI (default): the panel is shown and updated live in **Jupyter/Colab**; from a plain CLI the pipeline still runs (GUI updates no-op unless in an IPython context).
+
+   **Colab / Jupyter with full GUI**
+
+   ```python
+   from agentic_doc.agent import build_agent
+   from agentic_doc.gui import run_with_gui
+
+   agent, state, logger = build_agent()
+   run_with_gui(agent, state, logger, "/path/to/document.png")
+   ```
+
+   This displays the v12 panel (document preview, region/line overlay, phase indicators, agent log) and streams agent events so the GUI updates as assessment, regions, lines, and outputs become available. Use **View Outputs** in the panel to open HTML/Markdown/PageXML.
+
+   Or use as a package (headless / custom UI):
 
    ```python
    from agentic_doc.agent import build_agent
@@ -69,7 +83,8 @@ src/agentic_doc/
   export/            # pagexml, markdown, html_export
   tools/             # LangChain tools (analysis, layout, transcription, export)
   agent/             # prompt, callbacks, build_agent
-  gui/               # panel (Jupyter-friendly GUI)
+  gui/               # panel (create_gui_panel_v12, GUIInterface, GUILoggerAdapter, run_with_gui)
+  gui/resources/    # panel_v12.html (full HTML/JS/CSS)
 main.py              # CLI entry
 tests/test_line_detector.py
 ```

@@ -1,0 +1,492 @@
+
+<style>
+.output_subarea, .output_area, .output, .cell .output_wrapper,
+.colab-output-wrapper, .output-wrapper { overflow: visible !important; }
+
+#docgui-panel {
+    position: fixed;
+    top: 10px; left: 10px;
+    width: calc(100vw - 20px);
+    height: calc(100vh - 20px);
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.drag-edge { position: absolute; z-index: 10; }
+.drag-edge.top { top: 0; left: 0; right: 0; height: 8px; cursor: move; }
+.drag-edge.bottom { bottom: 0; left: 0; right: 0; height: 8px; cursor: move; }
+.drag-edge.left { top: 0; bottom: 0; left: 0; width: 8px; cursor: move; }
+.drag-edge.right { top: 0; bottom: 0; right: 0; width: 8px; cursor: move; }
+
+#docgui-titlebar {
+    height: 44px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex; align-items: center; padding: 0 16px;
+    cursor: move; flex-shrink: 0; user-select: none;
+}
+#docgui-titlebar .title { color: white; font-weight: 600; font-size: 15px; flex: 1; margin-left: 10px; }
+#docgui-status { background: rgba(255,255,255,0.2); color: white; padding: 5px 12px; border-radius: 12px; font-size: 12px; margin-right: 12px; }
+.title-btn { padding: 7px 14px; border: none; background: rgba(255,255,255,0.25); color: white; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 8px; }
+.title-btn:hover { background: rgba(255,255,255,0.35); }
+.close-btn { width: 30px; height: 30px; border: none; background: rgba(255,255,255,0.2); color: white; border-radius: 6px; cursor: pointer; font-size: 14px; }
+
+#docgui-phases {
+    height: 50px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+    display: flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0;
+}
+.phase { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+.phase .dot { width: 26px; height: 26px; border-radius: 50%; background: #e2e8f0; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #94a3b8; transition: all 0.3s; }
+.phase .lbl { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+.phase.active .dot { background: #3b82f6; border-color: #3b82f6; color: white; box-shadow: 0 0 0 4px rgba(59,130,246,0.2); }
+.phase.active .lbl { color: #3b82f6; }
+.phase.done .dot { background: #10b981; border-color: #10b981; color: white; }
+.phase.done .lbl { color: #10b981; }
+
+#docgui-main { flex: 1; display: flex; overflow: hidden; }
+
+#docgui-left { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #e2e8f0; min-width: 0; }
+
+#docgui-assessment { display: none; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 1px solid #bae6fd; padding: 10px 14px; flex-shrink: 0; }
+#docgui-assessment .header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 600; color: #0369a1; font-size: 12px; }
+#docgui-assessment .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.assess-card { background: white; border-radius: 6px; padding: 6px 10px; border: 1px solid #bae6fd; }
+.assess-card .lbl { font-size: 9px; color: #0369a1; text-transform: uppercase; font-weight: 600; }
+.assess-card .val { font-size: 12px; color: #0c4a6e; font-weight: 500; }
+
+#docgui-img-header { padding: 8px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+#docgui-img-header .left { font-weight: 600; color: #64748b; }
+#docgui-img-info { color: #94a3b8; }
+
+#docgui-viewport { flex: 1; overflow: hidden; background: #1a1a2e; position: relative; cursor: grab; }
+#docgui-viewport:active { cursor: grabbing; }
+
+#docgui-canvas-container { position: absolute; transform-origin: 0 0; }
+#docgui-img { display: block; max-width: none; }
+#docgui-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+#docgui-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; }
+#docgui-placeholder .icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+#docgui-placeholder .text { font-size: 14px; }
+
+#docgui-img-toolbar { padding: 8px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; flex-shrink: 0; }
+.toolbar-btn { padding: 6px 12px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.toolbar-btn:hover { background: #f1f5f9; }
+.toolbar-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+
+#docgui-right { width: 380px; display: flex; flex-direction: column; flex-shrink: 0; }
+#docgui-log-header { padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 13px; font-weight: 600; color: #64748b; }
+#docgui-log { flex: 1; overflow-y: auto; padding: 10px; font-size: 13px; }
+
+.log-entry { padding: 10px 12px; margin-bottom: 8px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #cbd5e1; word-wrap: break-word; }
+.log-entry.reasoning { border-left-color: #8b5cf6; background: #faf5ff; }
+.log-entry.action { border-left-color: #10b981; background: #f0fdf4; }
+.log-entry.observation { border-left-color: #f59e0b; background: #fffbeb; }
+.log-entry.phase { border-left-color: #06b6d4; background: #ecfeff; }
+.log-entry.error { border-left-color: #ef4444; background: #fef2f2; }
+.log-entry .header { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+.log-entry .icon { font-size: 14px; }
+.log-entry .level { font-weight: 600; text-transform: uppercase; font-size: 9px; color: #64748b; }
+.log-entry .time { margin-left: auto; color: #94a3b8; font-size: 10px; }
+.log-entry .content { color: #334155; line-height: 1.5; }
+
+.obs-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.obs-tag { display: inline-flex; padding: 3px 7px; background: white; border: 1px solid #e2e8f0; border-radius: 5px; font-size: 11px; font-weight: 500; }
+.obs-tag.success { border-color: #10b981; color: #059669; background: #ecfdf5; }
+.obs-tag.error { border-color: #ef4444; color: #dc2626; background: #fef2f2; }
+.obs-tag.tool { border-color: #3b82f6; color: #2563eb; background: #eff6ff; }
+
+#docgui-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; }
+#docgui-modal-content { width: 95%; height: 95%; background: white; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+#docgui-modal-header { padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+#docgui-modal-tabs { display: flex; gap: 5px; padding: 8px 16px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
+.modal-tab { padding: 8px 14px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.modal-tab:hover { background: #f8fafc; }
+.modal-tab.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+#docgui-modal-frame { flex: 1; border: none; width: 100%; }
+
+/* Legend */
+#docgui-legend { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 8px 12px; font-size: 11px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: none; z-index: 5; }
+#docgui-legend .title { font-weight: 600; margin-bottom: 6px; color: #374151; }
+#docgui-legend .item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+#docgui-legend .color { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.2); }
+</style>
+
+<div id="docgui-panel">
+    <div class="drag-edge top"></div>
+    <div class="drag-edge bottom"></div>
+    <div class="drag-edge left"></div>
+    <div class="drag-edge right"></div>
+
+    <div id="docgui-titlebar">
+        <span style="font-size:18px;">🏛️</span>
+        <span class="title">Document Processor</span>
+        <div id="docgui-status">Ready</div>
+        <button class="title-btn" id="docgui-output-btn" onclick="GUI.showOutputs()" style="display:none;">📄 View Outputs</button>
+        <button class="close-btn" onclick="document.getElementById('docgui-panel').style.display='none'">✕</button>
+    </div>
+
+    <div id="docgui-phases">
+        <div class="phase" data-phase="initialization"><div class="dot">1</div><div class="lbl">Init</div></div>
+        <div class="phase" data-phase="assessment"><div class="dot">2</div><div class="lbl">Assess</div></div>
+        <div class="phase" data-phase="enhancement"><div class="dot">3</div><div class="lbl">Enhance</div></div>
+        <div class="phase" data-phase="region_detection"><div class="dot">4</div><div class="lbl">Regions</div></div>
+        <div class="phase" data-phase="line_detection"><div class="dot">5</div><div class="lbl">Lines</div></div>
+        <div class="phase" data-phase="transcription"><div class="dot">6</div><div class="lbl">Transcribe</div></div>
+        <div class="phase" data-phase="export"><div class="dot">7</div><div class="lbl">Export</div></div>
+    </div>
+
+    <div id="docgui-main">
+        <div id="docgui-left">
+            <div id="docgui-assessment">
+                <div class="header">📋 Assessment Results</div>
+                <div class="cards" id="docgui-assess-cards"></div>
+            </div>
+
+            <div id="docgui-img-header">
+                <span class="left">📄 Document Preview</span>
+                <span id="docgui-img-info">No image</span>
+            </div>
+
+            <div id="docgui-viewport">
+                <div id="docgui-placeholder">
+                    <div class="icon">🖼️</div>
+                    <div class="text">No document loaded</div>
+                </div>
+                <div id="docgui-canvas-container">
+                    <img id="docgui-img" style="display:none;">
+                    <canvas id="docgui-canvas"></canvas>
+                </div>
+                <div id="docgui-legend">
+                    <div class="title">Region Types</div>
+                    <div id="docgui-legend-items"></div>
+                </div>
+            </div>
+
+            <div id="docgui-img-toolbar">
+                <button class="toolbar-btn" onclick="GUI.zoomIn()">➕ Zoom</button>
+                <button class="toolbar-btn" onclick="GUI.zoomOut()">➖ Zoom</button>
+                <button class="toolbar-btn" onclick="GUI.zoomFit()">⊡ Fit</button>
+                <button class="toolbar-btn" onclick="GUI.zoomReset()">1:1</button>
+                <button class="toolbar-btn" id="btn-regions" onclick="GUI.toggleRegions()">☐ Regions</button>
+                <button class="toolbar-btn" id="btn-lines" onclick="GUI.toggleLines()">☐ Lines</button>
+                <button class="toolbar-btn" id="btn-labels" onclick="GUI.toggleLabels()">☐ Labels</button>
+            </div>
+        </div>
+
+        <div id="docgui-right">
+            <div id="docgui-log-header">🧠 Agent Reasoning</div>
+            <div id="docgui-log"></div>
+        </div>
+    </div>
+
+    <div id="docgui-modal">
+        <div id="docgui-modal-content">
+            <div id="docgui-modal-header">
+                <span style="font-weight:600;">📄 Pipeline Outputs</span>
+                <button class="close-btn" onclick="GUI.hideOutputs()">✕</button>
+            </div>
+            <div id="docgui-modal-tabs">
+                <button class="modal-tab active" data-tab="html" onclick="GUI.showTab('html')">📄 HTML</button>
+                <button class="modal-tab" data-tab="markdown" onclick="GUI.showTab('markdown')">📝 Markdown</button>
+                <button class="modal-tab" data-tab="pagexml" onclick="GUI.showTab('pagexml')">📋 PageXML</button>
+            </div>
+            <iframe id="docgui-modal-frame"></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const S = {
+        imgW: 0, imgH: 0,
+        zoom: 1, panX: 0, panY: 0,
+        isDragging: false,
+        dragStartX: 0, dragStartY: 0,
+        panStartX: 0, panStartY: 0,
+        regions: [],
+        showRegions: true,
+        showLines: true,
+        showLabels: true,
+        outputs: { html: null, markdown: null, pagexml: null },
+        logHashes: new Set(),
+        lastTool: ''
+    };
+
+    const COLORS = {
+        'Paragraph': '#3b82f6', 'ParagraphRegion': '#3b82f6', 'TextRegion': '#3b82f6',
+        'Heading': '#f59e0b', 'HeadingRegion': '#f59e0b', 'TitleRegion': '#f59e0b', 'HeaderRegion': '#f59e0b',
+        'Table': '#10b981', 'TableRegion': '#10b981',
+        'Figure': '#ec4899', 'FigureRegion': '#ec4899', 'ImageRegion': '#ec4899',
+        'Marginalia': '#f97316', 'MarginaliaRegion': '#f97316',
+        'Footnote': '#8b5cf6', 'FootnoteRegion': '#8b5cf6',
+        'PageNumber': '#6366f1', 'PageNumberRegion': '#6366f1',
+        'Caption': '#14b8a6', 'CaptionRegion': '#14b8a6',
+        'Default': '#64748b'
+    };
+
+    function getColor(type) { return COLORS[type] || COLORS['Default']; }
+
+    const panel = document.getElementById('docgui-panel');
+    let panelDragging = false, pdx = 0, pdy = 0;
+    function initPanelDrag(e) {
+        if (e.target.tagName === 'BUTTON') return;
+        panelDragging = true;
+        pdx = e.clientX - panel.offsetLeft;
+        pdy = e.clientY - panel.offsetTop;
+        document.body.style.userSelect = 'none';
+    }
+    document.getElementById('docgui-titlebar').addEventListener('mousedown', initPanelDrag);
+    document.querySelectorAll('.drag-edge').forEach(el => el.addEventListener('mousedown', initPanelDrag));
+    document.addEventListener('mousemove', e => {
+        if (panelDragging) { panel.style.left = (e.clientX - pdx) + 'px'; panel.style.top = (e.clientY - pdy) + 'px'; }
+        if (S.isDragging) {
+            S.panX = S.panStartX + (e.clientX - S.dragStartX);
+            S.panY = S.panStartY + (e.clientY - S.dragStartY);
+            applyTransform();
+        }
+    });
+    document.addEventListener('mouseup', () => {
+        panelDragging = false;
+        S.isDragging = false;
+        document.body.style.userSelect = '';
+        if (typeof viewport !== 'undefined') viewport.style.cursor = 'grab';
+    });
+
+    const viewport = document.getElementById('docgui-viewport');
+    const container = document.getElementById('docgui-canvas-container');
+    const img = document.getElementById('docgui-img');
+    const canvas = document.getElementById('docgui-canvas');
+    const ctx = canvas.getContext('2d');
+
+    viewport.addEventListener('wheel', e => {
+        e.preventDefault();
+        const rect = viewport.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+        const oldZoom = S.zoom;
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        S.zoom = Math.max(0.1, Math.min(10, S.zoom * delta));
+        const zoomRatio = S.zoom / oldZoom;
+        S.panX = mouseX - (mouseX - S.panX) * zoomRatio;
+        S.panY = mouseY - (mouseY - S.panY) * zoomRatio;
+        applyTransform();
+    }, { passive: false });
+
+    viewport.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        S.isDragging = true;
+        S.dragStartX = e.clientX; S.dragStartY = e.clientY;
+        S.panStartX = S.panX; S.panStartY = S.panY;
+        viewport.style.cursor = 'grabbing';
+    });
+
+    function applyTransform() {
+        container.style.transform = `translate(${S.panX}px, ${S.panY}px) scale(${S.zoom})`;
+    }
+
+    function drawVisualization() {
+        if (!S.imgW || !S.imgH) return;
+        canvas.width = S.imgW; canvas.height = S.imgH;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!S.regions || S.regions.length === 0) return;
+        const usedTypes = new Set();
+        S.regions.forEach((region, idx) => {
+            const type = region.type || 'TextRegion';
+            const color = getColor(type);
+            const bbox = region.bbox || region.bounding_box;
+            usedTypes.add(type);
+            if (!bbox) return;
+            if (S.showRegions) {
+                ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.setLineDash([]);
+                ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
+                ctx.fillStyle = color + '15';
+                ctx.fillRect(bbox.x, bbox.y, bbox.width, bbox.height);
+            }
+            if (S.showLabels) {
+                const label = `${idx + 1}. ${(type || '').replace('Region', '')}`;
+                ctx.font = 'bold 14px sans-serif';
+                const textWidth = ctx.measureText(label).width;
+                ctx.fillStyle = color;
+                ctx.fillRect(bbox.x - 1, bbox.y - 22, textWidth + 10, 20);
+                ctx.fillStyle = 'white';
+                ctx.fillText(label, bbox.x + 4, bbox.y - 7);
+            }
+            if (S.showLines && region.lines && region.lines.length > 0) {
+                ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 2]);
+                region.lines.forEach(line => {
+                    const lineBbox = line.bbox || line.bounding_box;
+                    if (lineBbox) ctx.strokeRect(lineBbox.x, lineBbox.y, lineBbox.width, lineBbox.height);
+                    else if (line.polygon && line.polygon.length >= 4) {
+                        ctx.beginPath();
+                        ctx.moveTo(line.polygon[0], line.polygon[1]);
+                        for (let i = 2; i < line.polygon.length; i += 2) ctx.lineTo(line.polygon[i], line.polygon[i + 1]);
+                        ctx.closePath(); ctx.stroke();
+                    }
+                });
+            }
+        });
+        ctx.setLineDash([]);
+        const legend = document.getElementById('docgui-legend');
+        const items = document.getElementById('docgui-legend-items');
+        if (usedTypes.size === 0) { legend.style.display = 'none'; return; }
+        legend.style.display = 'block';
+        items.innerHTML = Array.from(usedTypes).map(type =>
+            `<div class="item"><div class="color" style="background:${getColor(type)}"></div>${(type || '').replace('Region', '')}</div>`
+        ).join('') + '<div class="item"><div class="color" style="background:#22c55e"></div>Text Lines</div>';
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = String(str || '');
+        return div.innerHTML;
+    }
+
+    window.GUI = {
+        loadImage: function(dataUrl) {
+            img.onload = () => {
+                S.imgW = img.naturalWidth; S.imgH = img.naturalHeight;
+                img.style.display = 'block';
+                document.getElementById('docgui-placeholder').style.display = 'none';
+                document.getElementById('docgui-img-info').textContent = S.imgW + ' × ' + S.imgH;
+                canvas.width = S.imgW; canvas.height = S.imgH;
+                this.zoomFit();
+                drawVisualization();
+            };
+            img.src = dataUrl;
+        },
+        setRegions: function(regions) {
+            S.regions = regions || [];
+            document.getElementById('btn-regions').classList.add('active');
+            document.getElementById('btn-labels').classList.add('active');
+            S.showRegions = true; S.showLabels = true;
+            drawVisualization();
+        },
+        setLines: function(regionsWithLines) {
+            S.regions = regionsWithLines || [];
+            document.getElementById('btn-lines').classList.add('active');
+            S.showLines = true;
+            drawVisualization();
+        },
+        toggleRegions: function() { S.showRegions = !S.showRegions; document.getElementById('btn-regions').classList.toggle('active', S.showRegions); drawVisualization(); },
+        toggleLines: function() { S.showLines = !S.showLines; document.getElementById('btn-lines').classList.toggle('active', S.showLines); drawVisualization(); },
+        toggleLabels: function() { S.showLabels = !S.showLabels; document.getElementById('btn-labels').classList.toggle('active', S.showLabels); drawVisualization(); },
+        zoomIn: function() { S.zoom = Math.min(10, S.zoom * 1.3); this._centerZoom(); },
+        zoomOut: function() { S.zoom = Math.max(0.1, S.zoom / 1.3); this._centerZoom(); },
+        zoomFit: function() {
+            if (!S.imgW) return;
+            const rect = viewport.getBoundingClientRect();
+            const scaleX = (rect.width - 40) / S.imgW, scaleY = (rect.height - 40) / S.imgH;
+            S.zoom = Math.min(scaleX, scaleY, 1);
+            S.panX = (rect.width - S.imgW * S.zoom) / 2;
+            S.panY = (rect.height - S.imgH * S.zoom) / 2;
+            applyTransform();
+        },
+        zoomReset: function() { S.zoom = 1; this._centerZoom(); },
+        _centerZoom: function() {
+            if (!S.imgW) return;
+            const rect = viewport.getBoundingClientRect();
+            S.panX = (rect.width - S.imgW * S.zoom) / 2;
+            S.panY = (rect.height - S.imgH * S.zoom) / 2;
+            applyTransform();
+        },
+        setPhase: function(name, status) {
+            document.querySelectorAll('.phase').forEach(el => {
+                if (el.dataset.phase === name) { el.classList.remove('active', 'done'); el.classList.add(status); }
+            });
+            if (status === 'active') document.getElementById('docgui-status').textContent = (name || '').replace('_', ' ');
+        },
+        completePhase: function(name) { this.setPhase(name, 'done'); },
+        setComplete: function() {
+            const el = document.getElementById('docgui-status');
+            el.textContent = '✓ Complete';
+            el.style.background = 'rgba(16,185,129,0.3)';
+        },
+        setAssessment: function(data) {
+            const panelEl = document.getElementById('docgui-assessment');
+            const cards = document.getElementById('docgui-assess-cards');
+            if (!data) { panelEl.style.display = 'none'; return; }
+            panelEl.style.display = 'block';
+            const items = [];
+            if (data.content_analysis) {
+                const ca = data.content_analysis;
+                if (ca.script_type) items.push(['✍️ Script', ca.script_type]);
+                if (ca.primary_language) items.push(['🌐 Language', ca.primary_language]);
+                if (ca.estimated_period) items.push(['📅 Period', ca.estimated_period]);
+            }
+            if (data.quality_metrics) {
+                const qm = data.quality_metrics;
+                if (qm.dimensions) items.push(['📐 Size', qm.dimensions.width + '×' + qm.dimensions.height]);
+                if (qm.noise_level !== undefined) items.push(['📊 Noise', qm.noise_level.toFixed(4)]);
+            }
+            cards.innerHTML = items.map(([lbl, val]) =>
+                '<div class="assess-card"><div class="lbl">' + lbl + '</div><div class="val">' + escapeHtml(val) + '</div></div>'
+            ).join('');
+        },
+        addLog: function(level, content, timestamp, toolName) {
+            const hash = level + (content || '').substring(0, 100);
+            if (S.logHashes.has(hash)) return;
+            S.logHashes.add(hash);
+            if (['tool_start', 'tool_end', 'action'].indexOf(level) >= 0) {
+                const m = String(content).match(/(\w+)/);
+                if (m) S.lastTool = m[1];
+            }
+            const logEl = document.getElementById('docgui-log');
+            const icons = { reasoning: '🧠', thought: '💭', action: '⚡', observation: '👁️', info: 'ℹ️', error: '❌', phase_start: '🚀', phase_end: '✓', success: '✅', tool_start: '▶️', tool_end: '⏹️' };
+            const classes = { reasoning: 'reasoning', thought: 'reasoning', action: 'action', observation: 'observation', phase_start: 'phase', phase_end: 'phase', error: 'error' };
+            let formatted = '<div class="content">' + escapeHtml(content) + '</div>';
+            if (level === 'observation') {
+                let status = null, info = '';
+                try {
+                    const str = String(content);
+                    if (str.trim().indexOf('{') === 0) {
+                        const data = JSON.parse(str);
+                        status = data.status;
+                        if (data.total_regions) info = data.total_regions + ' regions';
+                        else if (data.total_lines) info = data.total_lines + ' lines';
+                    }
+                } catch(e) {}
+                formatted = '<div class="obs-tags">' +
+                    (status ? '<span class="obs-tag ' + (status === 'success' ? 'success' : 'error') + '">' + (status === 'success' ? '✓' : '✗') + ' ' + status + '</span>' : '') +
+                    (toolName || S.lastTool ? '<span class="obs-tag tool">🔧 ' + escapeHtml(toolName || S.lastTool) + '</span>' : '') +
+                    (info ? '<span class="obs-tag">' + escapeHtml(info) + '</span>' : '') +
+                    '</div>';
+            }
+            const div = document.createElement('div');
+            div.className = 'log-entry ' + (classes[level] || '');
+            div.innerHTML = '<div class="header"><span class="icon">' + (icons[level] || '•') + '</span><span class="level">' + (level || '') + '</span><span class="time">' + (timestamp || '') + '</span></div>' + formatted;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+        },
+        clearLogs: function() {
+            document.getElementById('docgui-log').innerHTML = '';
+            S.logHashes.clear();
+            S.lastTool = '';
+        },
+        setOutput: function(type, content) {
+            S.outputs[type] = content;
+            if (content) document.getElementById('docgui-output-btn').style.display = 'inline-block';
+        },
+        showOutputs: function() { document.getElementById('docgui-modal').style.display = 'flex'; this.showTab('html'); },
+        hideOutputs: function() { document.getElementById('docgui-modal').style.display = 'none'; },
+        showTab: function(tab) {
+            document.querySelectorAll('.modal-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+            const frame = document.getElementById('docgui-modal-frame');
+            const content = S.outputs[tab];
+            if (!content) {
+                frame.srcdoc = '<html><body style="display:flex;align-items:center;justify-content:center;height:100%;font-family:system-ui;color:#64748b;"><div>No ' + tab + ' output yet</div></body></html>';
+                return;
+            }
+            if (tab === 'html') frame.srcdoc = content;
+            else {
+                const escaped = (content || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+                frame.srcdoc = '<html><head><meta charset="UTF-8"></head><body style="font-family:monospace;font-size:13px;white-space:pre-wrap;padding:20px;">' + escaped + '</body></html>';
+            }
+        }
+    };
+})();
+</script>
