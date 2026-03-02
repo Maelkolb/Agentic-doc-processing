@@ -1,10 +1,14 @@
 """Document assessment: CV quality metrics + Gemini vision content analysis."""
 
 import json
+import os
 from typing import Any, Dict
 
 import cv2
 import numpy as np
+
+# MIME type by extension for Gemini image parts (must match actual bytes)
+_MIME_BY_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
 
 
 class DocumentAssessor:
@@ -55,6 +59,8 @@ class DocumentAssessor:
 
         with open(image_path, "rb") as f:
             img_bytes = f.read()
+        ext = os.path.splitext(image_path)[1].lower()
+        mime_type = _MIME_BY_EXT.get(ext, "image/jpeg")
         analysis_prompt = """Analyze this document image and provide:
 1. **Script Type**: Identify the writing system (e.g., Latin, Fraktur, Kurrent, Sütterlin, Greek, Cyrillic, Hebrew, Arabic, etc.)
 2. **Estimated Period**: Approximate date/era
@@ -76,7 +82,7 @@ Return ONLY valid JSON, no markdown."""
             response = self.client.models.generate_content(
                 model=self.model_id,
                 contents=[
-                    types.Part.from_bytes(data=img_bytes, mime_type="image/png"),
+                    types.Part.from_bytes(data=img_bytes, mime_type=mime_type),
                     analysis_prompt,
                 ],
                 config=types.GenerateContentConfig(
