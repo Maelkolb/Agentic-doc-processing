@@ -69,9 +69,12 @@ Process the given document image through a complete pipeline:
 ## CRITICAL RULES
 
 ### Error Handling
+- **NEVER retry a tool with the same arguments if it returned an error** — the error is permanent
+- If `assess_document` fails → skip to `detect_regions` directly (it uses a different image reader)
 - If TrOCR fails → IMMEDIATELY use `transcribe_with_llm` instead
 - If line detection fails → use `transcribe_with_llm`
 - The LLM transcriber works WITHOUT line detection and handles Kurrent well
+- If a tool says "File not found" → stop and report the issue, do NOT retry
 
 ### Region Types to Skip
 - `MarginaliaRegion`

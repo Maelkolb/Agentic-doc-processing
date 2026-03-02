@@ -5,10 +5,25 @@ from typing import Any, Dict, List
 
 import cv2
 import numpy as np
+from PIL import Image
 
 
 class ImageEnhancer:
     """Image preprocessing: deskew, denoise, contrast, bleedthrough, faded."""
+
+    @staticmethod
+    def _load_image(image_path: str) -> np.ndarray:
+        """Load image with cv2, falling back to PIL conversion if cv2 fails."""
+        img = cv2.imread(image_path)
+        if img is not None:
+            return img
+        # Fallback: load with PIL and convert to cv2 BGR format
+        try:
+            pil_img = Image.open(image_path).convert("RGB")
+            arr = np.array(pil_img)
+            return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+        except Exception as e:
+            raise ValueError(f"Cannot read image: {image_path}. Error: {e}")
 
     def deskew(self, image: np.ndarray, angle: float = None) -> np.ndarray:
         if angle is None:
@@ -74,9 +89,12 @@ class ImageEnhancer:
         return cv2.addWeighted(enhanced, 1.3, gaussian, -0.3, 0)
 
     def enhance(self, image_path: str, operations: List[str] = None) -> Dict[str, Any]:
-        image = cv2.imread(image_path)
-        if image is None:
-            return {"status": "error", "error": f"Cannot read image: {image_path}"}
+        if not os.path.isfile(image_path):
+            return {"status": "error", "error": f"File not found: {image_path}"}
+        try:
+            image = self._load_image(image_path)
+        except ValueError as e:
+            return {"status": "error", "error": str(e)}
         if operations is None:
             operations = ["deskew", "denoise", "enhance_contrast"]
         applied = []

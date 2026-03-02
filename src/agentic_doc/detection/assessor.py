@@ -4,11 +4,33 @@ import json
 import os
 from typing import Any, Dict
 
-import cv2
 import numpy as np
+from PIL import Image
+
 
 # MIME type by extension for Gemini image parts (must match actual bytes)
 _MIME_BY_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
+
+
+def _validate_image_path(image_path: str) -> None:
+    """Validate that the image path exists and is readable."""
+    if not os.path.isfile(image_path):
+        raise FileNotFoundError(
+            f"Image file not found: {image_path}. "
+            f"Check that the file exists and the path is correct. "
+            f"Directory contents of '{os.path.dirname(image_path) or '.'}': "
+            f"{os.listdir(os.path.dirname(image_path) or '.')[:20]}"
+        )
+
+
+def _load_image_pil(image_path: str) -> Image.Image:
+    """Load image with PIL (more robust than cv2 for various formats)."""
+    try:
+        img = Image.open(image_path)
+        img.load()  # force full load to catch truncated images
+        return img.convert("RGB")
+    except Exception as e:
+        raise ValueError(f"Cannot open image with PIL: {image_path}. Error: {e}")
 
 
 class DocumentAssessor:
@@ -19,9 +41,24 @@ class DocumentAssessor:
         self.model_id = model_id
 
     def _analyze_image_quality(self, image_path: str) -> Dict[str, Any]:
-        img = cv2.imread(image_path)
-        if img is None:
-            raise ValueError(f"Cannot read image: {image_path}")
+        """Analyze image quality. Uses cv2 if available, falls back to PIL-based metrics."""
+        # Try cv2 first for richer metrics
+        try:
+            import cv2
+            img = cv2.imread(image_path)
+            if img is not None:
+                return self._cv2_quality_metrics(img)
+        except ImportError:
+            pass
+        except Exception:
+            pass
+
+        # Fallback: PIL-based quality analysis
+        return self._pil_quality_metrics(image_path)
+
+    def _cv2_quality_metrics(self, img: np.ndarray) -> Dict[str, Any]:
+        """Compute quality metrics using OpenCV (preferred, richer metrics)."""
+        import cv2
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         height, width = gray.shape
         estimated_dpi = max(width / 8.5, height / 11) if width < height else max(height / 8.5, width / 11)
@@ -52,6 +89,34 @@ class DocumentAssessor:
             "sharpness": round(sharpness, 3),
             "noise_level": round(noise, 4),
             "skew_angle": round(skew_angle, 2),
+        }
+
+    def _pil_quality_metrics(self, image_path: str) -> Dict[str, Any]:
+        """Compute quality metrics using PIL (fallback when cv2 fails)."""
+        img = _load_image_pil(image_path)
+        width, height = img.size
+        estimated_dpi = max(width / 8.5, height / 11) if width < height else max(height / 8.5, width / 11)
+        gray = img.convert("L")
+        pixels = np.array(gray, dtype=np.float64)
+        brightness = float(np.mean(pixels) / 255.0)
+        contrast = float(np.std(pixels) / 128.0)
+        # Approximate sharpness: variance of pixel differences (Laplacian-like)
+        dx = np.diff(pixels, axis=1)
+        dy = np.diff(pixels, axis=0)
+        sharpness = min(float((np.var(dx) + np.var(dy)) / 1000), 1.0)
+        # Approximate noise: mean absolute difference from 3x3 mean
+        from PIL import ImageFilter
+        blurred = gray.filter(ImageFilter.GaussianBlur(radius=2))
+        blurred_arr = np.array(blurred, dtype=np.float64)
+        noise = float(np.mean(np.abs(pixels - blurred_arr)) / 255.0)
+        return {
+            "dimensions": {"width": width, "height": height},
+            "estimated_dpi": round(estimated_dpi),
+            "brightness": round(brightness, 3),
+            "contrast": round(contrast, 3),
+            "sharpness": round(sharpness, 3),
+            "noise_level": round(noise, 4),
+            "skew_angle": 0.0,
         }
 
     def _analyze_content(self, image_path: str) -> Dict[str, Any]:
@@ -87,7 +152,6 @@ Return ONLY valid JSON, no markdown."""
                 ],
                 config=types.GenerateContentConfig(
                     temperature=1.0,
-                    thinking_config=types.ThinkingConfig(thinking_level="low"),
                 ),
             )
             response_text = response.text.strip()
@@ -109,6 +173,7 @@ Return ONLY valid JSON, no markdown."""
             }
 
     def assess(self, image_path: str) -> Dict[str, Any]:
+        _validate_image_path(image_path)
         quality_metrics = self._analyze_image_quality(image_path)
         content_analysis = self._analyze_content(image_path)
         preprocessors = []
