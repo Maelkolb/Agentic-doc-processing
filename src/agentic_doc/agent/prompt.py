@@ -92,4 +92,11 @@ Process the given document image through a complete pipeline:
 - Always generate ALL THREE output formats at the end
 - Report what you've accomplished in your final message
 - If something fails, adapt and continue with alternatives
+
+## CRITICAL: DO NOT SKIP STEPS
+- You MUST actually call each tool — do NOT claim a step is done without calling the tool
+- After detect_lines, you MUST call get_transcription_plan, then transcribe each region, then compile_transcription
+- After compile_transcription, you MUST call export_to_pagexml, export_to_markdown, and export_to_html
+- If you report completion without calling the export tools, the user will have NO output files
+- Every tool call produces a visible log entry — if a step has no log, it did not happen
 """

@@ -27,6 +27,7 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
     @tool
     def get_transcription_plan() -> str:
         """Get region details and transcription recommendations. Shows which tools are available (tesseract, trocr, llm) based on line detection."""
+        logger.info("Generating transcription plan")
         regions_data, has_lines = _get_regions_data(state)
         if not regions_data:
             return json.dumps({"status": "error", "error": "No regions. Run detect_regions first."})
@@ -77,6 +78,7 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
     @tool
     def transcribe_with_tesseract(region_id: str, languages: Optional[str] = "german,latin") -> str:
         """Transcribe a text region using Tesseract OCR (line-by-line). Requires line detection. Best for printed text."""
+        logger.info(f"Transcribing region {region_id} with Tesseract")
         regions_data, has_lines = _get_regions_data(state)
         if not regions_data:
             return json.dumps({"status": "error", "error": "No regions. Run detect_regions first."})
@@ -102,6 +104,7 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
     @tool
     def transcribe_with_trocr(region_id: str, model: Optional[str] = "handwritten") -> str:
         """Transcribe a text region using TrOCR (line-by-line HTR). Requires line detection. Best for handwriting/Kurrent."""
+        logger.info(f"Transcribing region {region_id} with TrOCR")
         regions_data, has_lines = _get_regions_data(state)
         if not regions_data:
             return json.dumps({"status": "error", "error": "No regions. Run detect_regions first."})
@@ -129,6 +132,7 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
         output_format: Optional[str] = "text",
     ) -> str:
         """Transcribe a region using Gemini vision. Works with or without line detection. Use for tables (markdown), images (description), or complex/handwritten text."""
+        logger.info(f"Transcribing region {region_id} with LLM (format={output_format})")
         regions_data, _ = _get_regions_data(state)
         if not regions_data:
             return json.dumps({"status": "error", "error": "No regions. Run detect_regions first."})
@@ -164,6 +168,7 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
     @tool
     def compile_transcription() -> str:
         """Compile all transcription results into a final document. Merge line-level and region-level text. Call after transcribing all regions."""
+        logger.info("Compiling transcription results")
         if not getattr(state, "transcription_results", None) or not state.transcription_results:
             return json.dumps({"status": "error", "error": "No transcriptions. Transcribe regions first."})
         regions_source = None
