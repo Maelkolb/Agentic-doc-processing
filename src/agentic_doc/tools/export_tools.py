@@ -13,6 +13,7 @@ def get_export_tools(state, logger):
     @tool
     def export_to_pagexml(output_filename: Optional[str] = None) -> str:
         """Export the document to PAGE XML format (standard for layout + transcription). Run compile_transcription first."""
+        logger.info("Exporting to PAGE XML")
         if not getattr(state, "final_transcription", None) or not state.final_transcription:
             return json.dumps({"status": "error", "error": "No transcription. Run compile_transcription first."})
         source_image = state.current_image_path or "document"
@@ -44,6 +45,7 @@ def get_export_tools(state, logger):
     @tool
     def export_to_markdown(output_filename: Optional[str] = None, include_metadata: bool = True) -> str:
         """Export the document as a Markdown digital edition. Run compile_transcription first."""
+        logger.info("Exporting to Markdown")
         if not getattr(state, "final_transcription", None) or not state.final_transcription:
             return json.dumps({"status": "error", "error": "No transcription. Run compile_transcription first."})
         source_image = state.current_image_path or "document"
@@ -68,6 +70,7 @@ def get_export_tools(state, logger):
     @tool
     def export_to_html(output_filename: Optional[str] = None) -> str:
         """Export as interactive HTML with image overlay and region/line highlighting. Run compile_transcription first."""
+        logger.info("Exporting to HTML")
         if not getattr(state, "final_transcription", None) or not state.final_transcription:
             return json.dumps({"status": "error", "error": "No transcription. Run compile_transcription first."})
         source_image = state.current_image_path or "document"

@@ -141,7 +141,7 @@ Return ONLY valid JSON, no markdown."""
                     analysis_prompt,
                 ],
                 config=types.GenerateContentConfig(
-                    temperature=1.0,
+                    temperature=0.2,
                     thinking_config=types.ThinkingConfig(thinking_level="low"),
                 ),
             )
@@ -158,8 +158,9 @@ Return ONLY valid JSON, no markdown."""
                 "estimated_period": "unknown",
                 "primary_language": "unknown",
                 "document_type": "unknown",
-                "is_printed": True,
+                "is_printed": False,
                 "layout_complexity": "moderate",
+                "content_analysis_failed": True,
                 "error": str(e),
             }
 
@@ -171,13 +172,14 @@ Return ONLY valid JSON, no markdown."""
             preprocessors.append("deskew")
         if quality_metrics["noise_level"] > 0.03:
             preprocessors.append("denoise")
-        if quality_metrics["contrast"] < 0.3:
+        if quality_metrics["contrast"] < 0.3 or quality_metrics["brightness"] < 0.3 or quality_metrics["brightness"] > 0.85:
             preprocessors.append("enhance_contrast")
-        if quality_metrics["brightness"] < 0.3 or quality_metrics["brightness"] > 0.85:
-            preprocessors.append("enhance_contrast")
-        script = content_analysis.get("script_type", "Latin")
-        is_printed = content_analysis.get("is_printed", True)
-        if script in ["Fraktur", "Kurrent", "Sütterlin", "Antiqua"] or not is_printed:
+        script = content_analysis.get("script_type", "unknown")
+        is_printed = content_analysis.get("is_printed", False)
+        content_failed = content_analysis.get("content_analysis_failed", False)
+        if content_failed or script == "unknown":
+            rec_tool = "llm_transcriber"
+        elif script in ["Fraktur", "Kurrent", "Sütterlin", "Antiqua"] or not is_printed:
             rec_tool = "llm_transcriber"
         elif is_printed and quality_metrics["sharpness"] > 0.4:
             rec_tool = "tesseract"
@@ -188,6 +190,7 @@ Return ONLY valid JSON, no markdown."""
             "preprocessors": preprocessors,
             "recognition_tool": rec_tool,
             "use_llm_refinement": content_analysis.get("script_type") in ["Fraktur", "Kurrent", "Sütterlin"],
+            "content_analysis_failed": content_failed,
         }
         return {
             "status": "success",
