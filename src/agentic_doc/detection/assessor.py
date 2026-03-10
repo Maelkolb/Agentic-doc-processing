@@ -7,9 +7,7 @@ from typing import Any, Dict
 import numpy as np
 from PIL import Image
 
-
-# MIME type by extension for Gemini image parts (must match actual bytes)
-_MIME_BY_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
+from ..utils import MIME_BY_EXT, clean_llm_json, detect_skew_angle
 
 
 
@@ -58,19 +56,10 @@ class DocumentAssessor:
         sharpness = min(laplacian.var() / 500, 1.0)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
         noise = np.mean(np.abs(gray.astype(float) - blur.astype(float))) / 255.0
-        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 80, minLineLength=width // 10, maxLineGap=20)
-        skew_angle = 0.0
-        if lines is not None:
-            angles = []
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                if x2 - x1 != 0:
-                    angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
-                    if abs(angle) < 45:
-                        angles.append(angle)
-            if angles:
-                skew_angle = float(np.median(angles))
+        skew_angle = detect_skew_angle(
+            gray, canny_low=50, canny_high=150,
+            min_line_length=width // 10, max_angle=45.0,
+        )
         return {
             "dimensions": {"width": width, "height": height},
             "estimated_dpi": round(estimated_dpi),
@@ -115,7 +104,7 @@ class DocumentAssessor:
         with open(image_path, "rb") as f:
             img_bytes = f.read()
         ext = os.path.splitext(image_path)[1].lower()
-        mime_type = _MIME_BY_EXT.get(ext, "image/jpeg")
+        mime_type = MIME_BY_EXT.get(ext, "image/jpeg")
         analysis_prompt = """Analyze this document image and provide:
 1. **Script Type**: Identify the writing system (e.g., Latin, Fraktur, Kurrent, Sütterlin, Greek, Cyrillic, Hebrew, Arabic, etc.)
 2. **Estimated Period**: Approximate date/era
@@ -145,11 +134,7 @@ Return ONLY valid JSON, no markdown."""
                     thinking_config=types.ThinkingConfig(thinking_level="low"),
                 ),
             )
-            response_text = response.text.strip()
-            if response_text.startswith("```"):
-                response_text = response_text.split("```")[1]
-                if response_text.startswith("json"):
-                    response_text = response_text[4:]
+            response_text = clean_llm_json(response.text)
             return json.loads(response_text)
         except Exception as e:
             print(f"Content analysis error: {e}")

@@ -1,6 +1,6 @@
 """Build the document processing agent: LLM, tools, prompt, runnable."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -75,12 +75,7 @@ def build_agent(
         google_api_key=api_key,
     )
 
-    # Prefer create_agent from langchain.agents (system_prompt=), fallback to langgraph create_react_agent (prompt=)
-    try:
-        from langchain.agents import create_agent
-        agent_executor = create_agent(llm, tools, system_prompt=SYSTEM_PROMPT)
-    except (ImportError, TypeError):
-        from langgraph.prebuilt import create_react_agent
-        agent_executor = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
+    from langgraph.prebuilt import create_react_agent
+    agent_executor = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
 
     return agent_executor, state, logger
