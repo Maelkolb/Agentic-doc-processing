@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from ..utils import detect_skew_angle
+
 
 class ImageEnhancer:
     """Image preprocessing: deskew, denoise, contrast, bleedthrough, faded."""
@@ -28,22 +30,10 @@ class ImageEnhancer:
     def deskew(self, image: np.ndarray, angle: float = None) -> np.ndarray:
         if angle is None:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-            edges = cv2.Canny(gray, 30, 100, apertureSize=3)
-            lines = cv2.HoughLinesP(
-                edges, 1, np.pi / 180, 80,
-                minLineLength=gray.shape[1] // 8, maxLineGap=20,
+            angle = detect_skew_angle(
+                gray, canny_low=30, canny_high=100,
+                min_line_length=gray.shape[1] // 8, max_angle=15.0,
             )
-            if lines is not None:
-                angles = []
-                for line in lines:
-                    x1, y1, x2, y2 = line[0]
-                    if x2 - x1 != 0:
-                        ang = np.degrees(np.arctan2(y2 - y1, x2 - x1))
-                        if abs(ang) < 15:
-                            angles.append(ang)
-                angle = float(np.median(angles)) if angles else 0.0
-            else:
-                angle = 0.0
         if abs(angle) < 0.1:
             return image
         h, w = image.shape[:2]

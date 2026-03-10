@@ -77,10 +77,7 @@ def get_layout_tools(state, logger, region_detector, line_detector, visualizer):
             if not output_path:
                 base, ext = os.path.splitext(image_path)
                 output_path = f"{base}_layout_visualization.png"
-            fig = visualizer.visualize(image_path, regions)
-            fig.savefig(output_path, dpi=150, bbox_inches="tight", facecolor="white")
-            import matplotlib.pyplot as plt
-            plt.close(fig)
+            visualizer.save_visualization(image_path, regions, output_path)
             state.output_files["visualization"] = output_path
             total_lines = sum(len(r.get("lines", [])) for r in regions)
             return json.dumps({

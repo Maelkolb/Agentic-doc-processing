@@ -14,6 +14,7 @@ class StreamingAgentCallback(BaseCallbackHandler):
     def __init__(self, logger: RichAgentLogger):
         self.logger = logger
         self.tool_start_times = {}
+        self._tool_name_stack = []
         self._in_tool_call = False
         self._last_content = ""
 
@@ -80,6 +81,7 @@ class StreamingAgentCallback(BaseCallbackHandler):
         if new_phase and new_phase != self.logger.current_phase:
             self.logger.phase_end()
             self.logger.phase_start(new_phase)
+        self._tool_name_stack.append(tool_name)
         self.tool_start_times[tool_name] = self.logger.tool_start(tool_name)
         try:
             args = json.loads(input_str) if isinstance(input_str, str) else input_str
@@ -89,8 +91,8 @@ class StreamingAgentCallback(BaseCallbackHandler):
 
     def on_tool_end(self, output, **kwargs):
         self._in_tool_call = False
-        if self.tool_start_times:
-            tool_name = list(self.tool_start_times.keys())[-1]
+        if self._tool_name_stack:
+            tool_name = self._tool_name_stack.pop()
             start_time = self.tool_start_times.pop(tool_name, datetime.now())
             self.logger.tool_end(tool_name, start_time)
 

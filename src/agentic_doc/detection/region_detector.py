@@ -7,6 +7,8 @@ from typing import Any, Dict, List
 
 from PIL import Image
 
+from ..utils import MIME_BY_EXT, clean_llm_json
+
 
 class RegionDetector:
     """Region detection and classification using Gemini vision. Optimized prompt for bboxes."""
@@ -46,8 +48,7 @@ class RegionDetector:
         image = Image.open(image_path).convert("RGB")
         width, height = image.size
         ext = os.path.splitext(image_path)[1].lower()
-        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
-        mime_type = mime_map.get(ext, "image/jpeg")
+        mime_type = MIME_BY_EXT.get(ext, "image/jpeg")
         with open(image_path, "rb") as f:
             img_bytes = f.read()
 
@@ -91,19 +92,7 @@ Return the JSON:"""
                     thinking_config=types.ThinkingConfig(thinking_level="medium"),
                 ),
             )
-            response_text = response.text.strip()
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_text:
-                start = response_text.find("{")
-                end = response_text.rfind("}") + 1
-                if start != -1 and end > start:
-                    response_text = response_text[start:end]
-            elif not response_text.startswith("{"):
-                start = response_text.find("{")
-                end = response_text.rfind("}") + 1
-                if start != -1 and end > start:
-                    response_text = response_text[start:end]
+            response_text = clean_llm_json(response.text)
 
             result = json.loads(response_text)
             raw_regions = result.get("regions", [])

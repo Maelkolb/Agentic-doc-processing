@@ -96,8 +96,6 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
         result = tesseract_ocr.transcribe_lines(image, lines, lang_list)
         result["tool"] = "tesseract"
         result["region_id"] = region_id
-        if not hasattr(state, "transcription_results"):
-            state.transcription_results = {}
         state.transcription_results[region_id] = result
         return json.dumps(result, indent=2)
 
@@ -121,8 +119,6 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
         result = trocr_htr.transcribe_lines(image, lines, model or "handwritten")
         result["tool"] = "trocr"
         result["region_id"] = region_id
-        if not hasattr(state, "transcription_results"):
-            state.transcription_results = {}
         state.transcription_results[region_id] = result
         return json.dumps(result, indent=2)
 
@@ -160,8 +156,6 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
         )
         result["tool"] = "llm"
         result["region_id"] = region_id
-        if not hasattr(state, "transcription_results"):
-            state.transcription_results = {}
         state.transcription_results[region_id] = result
         return json.dumps(result, indent=2)
 
@@ -169,7 +163,7 @@ def get_transcription_tools(state, logger, tesseract_ocr, trocr_htr, llm_transcr
     def compile_transcription() -> str:
         """Compile all transcription results into a final document. Merge line-level and region-level text. Call after transcribing all regions."""
         logger.info("Compiling transcription results")
-        if not getattr(state, "transcription_results", None) or not state.transcription_results:
+        if not state.transcription_results:
             return json.dumps({"status": "error", "error": "No transcriptions. Transcribe regions first."})
         regions_source = None
         if state.line_result:
