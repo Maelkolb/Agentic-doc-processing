@@ -96,12 +96,11 @@ class GUIInterface:
             ext = (path.lower().split(".")[-1] if "." in path else "png")
             mime = "image/png" if ext == "png" else "image/jpeg"
             data_url = f"data:{mime};base64,{data}"
-            # Pass data URL to JS; avoid breaking script by not embedding in quoted string if huge
             self._js(f"GUI.loadImage('{data_url}');")
             print(f"   ✅ Image loaded: {os.path.basename(path)}")
             return True
         except Exception as e:
-            print(f"   ❌ Failed to load image: {e}")
+            print(f"   ❌ Failed to load image2: {e}")
             return False
 
     def set_regions(self, regions: List[Dict]) -> None:

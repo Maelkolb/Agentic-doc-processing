@@ -40,7 +40,8 @@ def get_layout_tools(state, logger, region_detector, line_detector, visualizer):
 
     @tool
     def detect_lines(image_path: str, regions_json: Optional[str] = None) -> str:
-        """STEP 4: Detect text lines within each region using Surya. Must be called AFTER detect_regions.
+        """STEP 4: Detect text lines within each region using Surya.
+        Must be called AFTER detect_regions.
         Returns JSON with regions updated to include line polygons and line counts."""
         logger.info(f"Detecting lines in: {image_path}")
         regions = None

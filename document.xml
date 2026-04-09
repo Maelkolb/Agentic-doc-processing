@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd">
+  <Metadata>
+    <Creator>Agentic Document Processor (LangGraph + Gemini)</Creator>
+    <Created>2026-04-09T14:02:38</Created>
+    <LastChange>2026-04-09T14:02:38</LastChange>
+  </Metadata>
+  <Page imageFilename="test_document.png" imageWidth="1686" imageHeight="2671">
+    <ReadingOrder>
+      <OrderedGroup id="reading_order">
+        <RegionRefIndexed regionRef="region_001" index="0"/>
+        <RegionRefIndexed regionRef="region_002" index="1"/>
+        <RegionRefIndexed regionRef="region_003" index="2"/>
+        <RegionRefIndexed regionRef="region_004" index="3"/>
+        <RegionRefIndexed regionRef="region_005" index="4"/>
+        <RegionRefIndexed regionRef="region_006" index="5"/>
+        <RegionRefIndexed regionRef="region_007" index="6"/>
+        <RegionRefIndexed regionRef="region_008" index="7"/>
+        <RegionRefIndexed regionRef="region_009" index="8"/>
+        <RegionRefIndexed regionRef="region_010" index="9"/>
+        <RegionRefIndexed regionRef="region_011" index="10"/>
+        <RegionRefIndexed regionRef="region_012" index="11"/>
+      </OrderedGroup>
+    </ReadingOrder>
+    <TextRegion id="region_001" type="PageNumberRegion">
+      <Coords points="1367,184 1475,184 1475,298 1367,298"/>
+      <TextLine id="region_001_line_001">
+        <Coords points="1366,205 1474,198 1475,243 1366,249"/>
+        <TextEquiv>
+          <Unicode>148.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_001_line_002">
+        <Coords points="1366,259 1474,259 1474,298 1366,298"/>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>148.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_002" type="ParagraphRegion">
+      <Coords points="22,238 1482,238 1482,392 22,392"/>
+      <TextLine id="region_002_line_001">
+        <Coords points="50,250 1482,256 1453,390 21,383"/>
+        <TextEquiv>
+          <Unicode>Im Garten macht sich auch heuer wie die vergangenen Jah- re nach der Brutzeit der Kleiber wieder recht bemerkbar.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Im Garten macht sich auch heuer wie die vergangenen Jah-
+re nach der Brutzeit der Kleiber wieder recht bemerkbar.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_003" type="HeadingRegion">
+      <Coords points="22,409 768,409 768,525 22,525"/>
+      <TextLine id="region_003_line_002">
+        <Coords points="21,431 767,431 767,525 21,525"/>
+        <TextEquiv>
+          <Unicode>6. August 1919. Kaufbeuren.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_003_line_001">
+        <Coords points="422,431 740,433 723,501 404,498"/>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>6. August 1919. Kaufbeuren.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_004" type="ParagraphRegion">
+      <Coords points="22,473 1482,473 1482,723 22,723"/>
+      <TextLine id="region_004_line_001">
+        <Coords points="52,472 1482,472 1446,626 21,612"/>
+        <TextEquiv>
+          <Unicode>Im Garten treibt sich heute ein Flug Stieglitze herum. Man</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_004_line_002">
+        <Coords points="21,616 1432,616 1432,675 21,675"/>
+        <TextEquiv>
+          <Unicode>kann überhaupt konstatieren, daß sich namentlich die</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_004_line_003">
+        <Coords points="23,668 1449,668 1449,723 23,723"/>
+        <TextEquiv>
+          <Unicode>Finkenvögel schon wieder in größere Flüge zusammen- tun, in denen sie dann nahrungsuchend umherstreifen.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Im Garten treibt sich heute ein Flug Stieglitze herum. Man
+kann überhaupt konstatieren, daß sich namentlich die
+Finkenvögel schon wieder in größere Flüge zusammen-
+tun, in denen sie dann nahrungsuchend umherstreifen.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_005" type="ParagraphRegion">
+      <Coords points="22,713 1482,713 1482,1334 22,1334"/>
+      <TextLine id="region_005_line_001">
+        <Coords points="108,738 1449,742 1448,795 108,791"/>
+        <TextEquiv>
+          <Unicode>Heute habe ich meinem zahmen Rotkehlchen die Frei-</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_002">
+        <Coords points="27,796 1452,805 1450,863 25,854"/>
+        <TextEquiv>
+          <Unicode>heit gegeben. Ich stellte den Käfig mit geöffneter Tür an das</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_003">
+        <Coords points="27,862 1419,865 1418,917 26,914"/>
+        <TextEquiv>
+          <Unicode>offene Fenster, wie gewohnt kam das Vögelchen heraus, er-</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_004">
+        <Coords points="21,922 1462,924 1462,980 21,978"/>
+        <TextEquiv>
+          <Unicode>staunt über die unbegrenzte Freiheit, die sich vor ihm auf-</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_005">
+        <Coords points="21,981 1480,981 1480,1036 21,1036"/>
+        <TextEquiv>
+          <Unicode>tat. Auf der Fensterbank machte es noch ein paar Knixe, kam</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_006">
+        <Coords points="25,1038 1463,1043 1462,1100 24,1095"/>
+        <TextEquiv>
+          <Unicode>dann nochmals an seinen Käfig, wie um Abschied zu neh-</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_007">
+        <Coords points="21,1102 1480,1102 1480,1159 21,1159"/>
+        <TextEquiv>
+          <Unicode>men und verschwand dann raschen Fluges in der Freiheit.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_008">
+        <Coords points="28,1162 1455,1162 1455,1215 28,1215"/>
+        <TextEquiv>
+          <Unicode>Tagsüber hörte ich es im Garten noch manchmal zwitschern.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_009">
+        <Coords points="28,1221 1453,1225 1452,1277 27,1273"/>
+        <TextEquiv>
+          <Unicode>Aus Mangel an Ringen konnte ich den Vogel leider nicht zeich-</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_005_line_010">
+        <Coords points="25,1290 140,1293 136,1323 21,1320"/>
+        <TextEquiv>
+          <Unicode>nen.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Heute habe ich meinem zahmen Rotkehlchen die Frei-
+heit gegeben. Ich stellte den Käfig mit geöffneter Tür an das
+offene Fenster, wie gewohnt kam das Vögelchen heraus, er-
+staunt über die unbegrenzte Freiheit, die sich vor ihm auf-
+tat. Auf der Fensterbank machte es noch ein paar Knixe, kam
+dann nochmals an seinen Käfig, wie um Abschied zu neh-
+men und verschwand dann raschen Fluges in der Freiheit.
+Tagsüber hörte ich es im Garten noch manchmal zwitschern.
+Aus Mangel an Ringen konnte ich den Vogel leider nicht zeich-
+nen.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_006" type="ParagraphRegion">
+      <Coords points="22,1325 1482,1325 1482,1706 22,1706"/>
+      <TextLine id="region_006_line_001">
+        <Coords points="103,1339 1480,1339 1480,1390 103,1390"/>
+        <TextEquiv>
+          <Unicode>Auch die am 30. Mai aus der Beckstettener Kolonie mit-</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_006_line_002">
+        <Coords points="22,1396 1435,1404 1431,1456 21,1448"/>
+        <TextEquiv>
+          <Unicode>genommene Saatkrähe habe ich heute fortgegeben. Da ich</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_006_line_003">
+        <Coords points="23,1463 1443,1463 1443,1511 23,1511"/>
+        <TextEquiv>
+          <Unicode>dem Vogel unvorsichtiger Weise die Schwingen gestutzt hatte,</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_006_line_004">
+        <Coords points="21,1522 1461,1523 1461,1574 21,1573"/>
+        <TextEquiv>
+          <Unicode>konnte ich ihm leider die Freiheit nicht geben. Hoffentlich</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_006_line_005">
+        <Coords points="22,1575 1458,1585 1453,1639 21,1628"/>
+        <TextEquiv>
+          <Unicode>entwischt er seinem neuen Pfleger einmal bei gegebner</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_006_line_006">
+        <Coords points="22,1639 901,1642 899,1693 21,1689"/>
+        <TextEquiv>
+          <Unicode>Gelegenheit in die goldene Freiheit.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Auch die am 30. Mai aus der Beckstettener Kolonie mit-
+genommene Saatkrähe habe ich heute fortgegeben. Da ich
+dem Vogel unvorsichtiger Weise die Schwingen gestutzt hatte,
+konnte ich ihm leider die Freiheit nicht geben. Hoffentlich
+entwischt er seinem neuen Pfleger einmal bei gegebner
+Gelegenheit in die goldene Freiheit.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_007" type="ParagraphRegion">
+      <Coords points="22,1680 1482,1680 1482,1834 22,1834"/>
+      <TextLine id="region_007_line_001">
+        <Coords points="26,1679 1479,1682 1408,1774 21,1760"/>
+        <TextEquiv>
+          <Unicode>Nachmittags im Klosterwald mehrere große Bunt[?]spechte</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_007_line_002">
+        <Coords points="31,1754 226,1755 204,1807 21,1806"/>
+        <TextEquiv>
+          <Unicode>gehört.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextLine id="region_007_line_003">
+        <Coords points="21,1813 1441,1813 1441,1833 21,1833"/>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Nachmittags im Klosterwald mehrere große Bunt[?]spechte
+gehört.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_008" type="ParagraphRegion">
+      <Coords points="22,1808 1482,1808 1482,1948 22,1948"/>
+      <TextLine id="region_008_line_001">
+        <Coords points="21,1807 1458,1807 1458,1924 21,1924"/>
+        <TextEquiv>
+          <Unicode>Auf dem „Kaimweiher“ zwei alte und ein junges Bläßhuhn beobachtet.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Auf dem „Kaimweiher“ zwei alte und ein junges Bläßhuhn
+beobachtet.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_009" type="HeadingRegion">
+      <Coords points="22,1976 768,1976 768,2079 22,2079"/>
+      <TextLine id="region_009_line_001">
+        <Coords points="21,1988 767,1988 767,2079 21,2079"/>
+        <TextEquiv>
+          <Unicode>7. August 1919. Kaufbeuren.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>7. August 1919. Kaufbeuren.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_010" type="ParagraphRegion">
+      <Coords points="22,2054 1482,2054 1482,2208 22,2208"/>
+      <TextLine id="region_010_line_001">
+        <Coords points="21,2053 1413,2053 1413,2180 21,2180"/>
+        <TextEquiv>
+          <Unicode>Ring vor Bernbach kann ich abends in einem Busch- werk 4 Elstern beobachten.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Ring vor Bernbach kann ich abends in einem Busch-
+werk 4 Elstern beobachten.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_011" type="HeadingRegion">
+      <Coords points="22,2209 768,2209 768,2325 22,2325"/>
+      <TextLine id="region_011_line_001">
+        <Coords points="21,2222 767,2222 767,2325 21,2325"/>
+        <TextEquiv>
+          <Unicode>8. August 1919. Kaufbeuren.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>8. August 1919. Kaufbeuren.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+    <TextRegion id="region_012" type="ParagraphRegion">
+      <Coords points="22,2300 1482,2300 1482,2454 22,2454"/>
+      <TextLine id="region_012_line_001">
+        <Coords points="21,2299 1433,2299 1433,2420 21,2420"/>
+        <TextEquiv>
+          <Unicode>Nachmittags bei schönem Wetter mache ich eine Ex- cursion auf die Halbinsel.</Unicode>
+        </TextEquiv>
+      </TextLine>
+      <TextEquiv>
+        <Unicode>Nachmittags bei schönem Wetter mache ich eine Ex-
+cursion auf die Halbinsel.</Unicode>
+      </TextEquiv>
+    </TextRegion>
+  </Page>
+</PcGts>

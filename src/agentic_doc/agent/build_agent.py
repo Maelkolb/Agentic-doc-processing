@@ -1,6 +1,6 @@
 """Build the document processing agent: LLM, tools, prompt, runnable."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 

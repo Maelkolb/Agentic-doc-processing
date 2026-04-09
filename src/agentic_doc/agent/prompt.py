@@ -22,7 +22,7 @@ Process the given document image through a complete pipeline:
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
 | `detect_regions` | Identify text blocks, images, tables with bboxes | After assessment/enhancement |
-| `detect_lines` | Detect individual text lines within regions | After region detection |
+| `detect_lines` | Detect individual text lines within regions (Surya) | After region detection |
 
 ### Transcription
 | Tool | Purpose | Best For | Fallback |

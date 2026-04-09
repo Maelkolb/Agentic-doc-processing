@@ -1,143 +1,167 @@
 # Agentic Document Processing
 
-LangChain/LangGraph-powered document processing pipeline: assessment, region detection, **line detection (Surya)**, OCR/HTR (Tesseract, TrOCR, Gemini vision), and export (PageXML, Markdown, HTML).
+A LangChain / LangGraph-powered pipeline that turns a document image into structured output (PageXML, Markdown, HTML). An AI agent drives every step — assessment, layout analysis, OCR/HTR, and export — choosing the right tools automatically.
 
-## Features
+## What it does
 
-- **Assessment**: CV quality metrics + Gemini vision content analysis (script, language, layout).
-- **Preprocessing**: Deskew, denoise, contrast enhancement (OpenCV).
-- **Layout**: Region detection (Gemini vision), **line detection (Surya)** with dict/object API compatibility and optional Layout fallback.
-- **Transcription**: Tesseract (printed), TrOCR (handwriting/Kurrent), Gemini vision (tables, complex layout).
-- **Export**: PAGE XML 2019, Markdown digital edition, interactive HTML.
+1. **Assess** the document (quality metrics via CV, content analysis via Gemini vision).
+2. **Enhance** the image if needed (deskew, denoise, contrast — OpenCV).
+3. **Detect regions** (paragraphs, headings, tables, marginalia — Gemini vision).
+4. **Detect text lines** inside each region (Surya DetectionPredictor).
+5. **Transcribe** every region with the best tool (Tesseract for print, TrOCR for handwriting, Gemini vision for complex layouts / Kurrent / tables).
+6. **Export** to PAGE XML 2019, Markdown digital edition, and interactive HTML.
 
-## Setup
+## Quick start — Google Colab
 
-1. **Clone and install**
+### 1. Install
 
-   ```bash
-   cd Agentic-doc-processing
-   pip install -e .
-   # Optional: Tesseract/TrOCR
-   pip install -e ".[tesseract,trocr]"
-   ```
+```python
+# Clone the repo (or upload the zip and unzip it)
+!git clone https://github.com/YOUR_USER/Agentic-doc-processing.git
+%cd Agentic-doc-processing
 
-2. **Google Colab**
+# Install the package
+!pip install -e ".[tesseract,trocr]"
 
-   Run this **first** in a Colab cell so `agentic_doc` is importable (clone + install the package):
+# Ensure importable
+import sys, os
+sys.path.insert(0, os.path.join(os.getcwd(), "src"))
+```
 
-   ```python
-   # Clone (skip if you already uploaded the repo or cloned elsewhere)
-   !git clone https://github.com/YOUR_USER/Agentic-doc-processing.git
-   %cd Agentic-doc-processing
+> **Important:** The package pins `transformers>=4.56.1,<5` because Surya 0.17.x is incompatible with `transformers 5.x`. If Colab pre-installs `transformers 5.x`, the `pip install -e .` will automatically downgrade it. If you see Surya returning 0 lines, run `pip install 'transformers>=4.56.1,<5'` and **restart the runtime**.
 
-   # Install the package so "import agentic_doc" works
-   !pip install -e .
+### 2. Set your Gemini API key
 
-   # If you still get "No module named 'agentic_doc'" after install, add src to path (run before imports):
-   import sys, os
-   repo = os.getcwd()  # must be the repo root (Agentic-doc-processing)
-   sys.path.insert(0, os.path.join(repo, "src"))
+Add a Colab Secret named `GEMINI_API_KEY` (sidebar 🔑), or:
 
-   # Optional: set Gemini API key from Colab Secrets (Secret name: GEMINI_API_KEY)
-   # from google.colab import userdata
-   # os.environ["GOOGLE_API_KEY"] = userdata.get("GEMINI_API_KEY")
-   ```
+```python
+os.environ["GOOGLE_API_KEY"] = "your-key-here"
+```
 
-   Then in the next cell you can use either headless `invoke` or the GUI:
+### 3. Upload an image and run
 
-   ```python
-   from langchain_core.messages import HumanMessage
-   from agentic_doc.agent import build_agent
-   from agentic_doc.agent.callbacks import StreamingAgentCallback
+```python
+from google.colab import files
+uploaded = files.upload()
+image_path = list(uploaded.keys())[0]
+```
 
-   image_path = "/content/0030_laubmannnl_00030-20250717_102644_right.jpg"
-   agent, state, logger = build_agent()
-   callback = StreamingAgentCallback(logger)
-   config = {"configurable": {"callbacks": [callback]}}
+**With GUI:**
+```python
+from agentic_doc.agent import build_agent
+from agentic_doc.gui import run_with_gui
 
-   result = agent.invoke(
-       {"messages": [HumanMessage(content=f"Process this document image completely: {image_path}. "
-           "Follow the full pipeline: assess, enhance if recommended, detect regions, detect lines, "
-           "get transcription plan, transcribe every text region (use transcribe_with_llm for tables and images), "
-           "compile transcription, then export to PageXML, Markdown, and HTML. Use the image path exactly as given for all tool calls.")]},
-       config=config,
-   )
-   if result and "messages" in result:
-       print(result["messages"][-1].content)
-   ```
+agent, state, logger = build_agent()
+run_with_gui(agent, state, logger, image_path)
+```
 
-   Or with the live GUI: `from agentic_doc.gui import run_with_gui` then `run_with_gui(agent, state, logger, image_path)`.
+**Headless:**
+```python
+from langchain_core.messages import HumanMessage
+from agentic_doc.agent import build_agent
+from agentic_doc.agent.callbacks import StreamingAgentCallback
 
-3. **Environment**
+agent, state, logger = build_agent()
+result = agent.invoke(
+    {"messages": [HumanMessage(content=(
+        f"Process this document image completely: {image_path}\n\n"
+        "Follow the full pipeline: assess, enhance if recommended, detect regions, "
+        "detect lines, get transcription plan, transcribe every text region "
+        "(use transcribe_with_llm for tables and images), compile transcription, "
+        "then export to PageXML, Markdown, and HTML."
+    ))]},
+    config={"configurable": {"callbacks": [StreamingAgentCallback(logger)]}},
+)
+```
 
-   Copy `.env.example` to `.env` and set:
+## Quick start — Local (VS Code / CLI)
 
-   - `GOOGLE_API_KEY` (required for Gemini)
+```bash
+git clone https://github.com/YOUR_USER/Agentic-doc-processing.git
+cd Agentic-doc-processing
+pip install -e ".[tesseract,trocr]"
+export GOOGLE_API_KEY="your-gemini-key"
 
-   In Colab you can set `GOOGLE_API_KEY` in the environment or use Colab Secrets (e.g. `userdata.get("GEMINI_API_KEY")`); the package reads it via `config.load_config()`.
+# CLI
+python main.py path/to/document.png
+python main.py path/to/document.png --no-gui
+```
 
-   Optional: `USE_LAYOUT_FALLBACK=true` to use Surya Layout when line detection returns no bboxes; `DETECTOR_BATCH_SIZE`, `DETECTOR_BLANK_THRESHOLD`, `DETECTOR_TEXT_THRESHOLD` for Surya tuning.
+## Surya line detection
 
-4. **Run**
+Surya's `DetectionPredictor` detects text line polygons within each region. For each region the detector crops from the full-page image, runs inference on the crop, and maps coordinates back to full-image space.
 
-   ```bash
-   python main.py path/to/document.png
-   python main.py path/to/document.png --no-gui
-   ```
+### Critical: transformers version
 
-   With GUI (default): the panel is shown and updated live in **Jupyter/Colab**; from a plain CLI the pipeline still runs (GUI updates no-op unless in an IPython context).
+Surya 0.17.x requires `transformers>=4.56.1,<5`. With `transformers 5.x` the model loads but outputs garbage (zero or one bbox for the entire image). This is pinned correctly in `pyproject.toml`. If your environment has `transformers 5.x` already installed, run:
 
-   **Colab / Jupyter with full GUI**
+```bash
+pip install 'transformers>=4.56.1,<5'
+```
 
-   ```python
-   from agentic_doc.agent import build_agent
-   from agentic_doc.gui import run_with_gui
+and **restart your Python runtime**.
 
-   agent, state, logger = build_agent()
-   run_with_gui(agent, state, logger, "/path/to/document.png")
-   ```
+### Tuning
 
-   This displays the v12 panel (document preview, region/line overlay, phase indicators, agent log) and streams agent events so the GUI updates as assessment, regions, lines, and outputs become available. Use **View Outputs** in the panel to open HTML/Markdown/PageXML.
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `DETECTOR_BATCH_SIZE` | `36` (GPU) | GPU VRAM vs speed |
+| `DETECTOR_BLANK_THRESHOLD` | `0.35` | Lower → more sensitive to gaps between lines |
+| `DETECTOR_TEXT_THRESHOLD` | `0.6` | Higher → lines merge less |
 
-   Or use as a package (headless / custom UI):
+## Configuration
 
-   ```python
-   from agentic_doc.agent import build_agent
-   from agentic_doc.agent.callbacks import StreamingAgentCallback
-   from langchain_core.messages import HumanMessage
-
-   agent, state, logger = build_agent()
-   result = agent.invoke(
-       {"messages": [HumanMessage(content="Process the document at: /path/to/image.png")]},
-       config={"configurable": {"callbacks": [StreamingAgentCallback(logger)]}},
-   )
-   ```
-
-## Line detection (Surya)
-
-Line detection uses Surya’s `DetectionPredictor`. The code **normalizes both dict and object** API responses (e.g. `surya-ocr` 0.17.x and newer), so you don’t need to pin an old version. If detection returns no or very few bboxes, set `USE_LAYOUT_FALLBACK=true` to derive line-level bboxes from Surya’s Layout model.
-
-- **Env vars**: `DETECTOR_BATCH_SIZE`, `DETECTOR_BLANK_THRESHOLD`, `DETECTOR_TEXT_THRESHOLD` (see Surya README).
-- **Tests**: `pytest tests/test_line_detector.py`
+| Env variable | Default | Purpose |
+|-------------|---------|---------|
+| `GOOGLE_API_KEY` | — | **Required.** Gemini API key |
+| `AGENT_MODEL` | `gemini-2.0-flash` | LLM for agent tool calling |
+| `VISION_MODEL` | `gemini-3-flash-preview` | LLM for vision tasks |
 
 ## Project layout
 
 ```
 src/agentic_doc/
-  config.py          # API key, model names
-  state.py           # ProcessingState
-  logging_utils.py   # RichAgentLogger
-  detection/         # assessor, region_detector, line_detector, image_enhancer, visualizer
-  transcription/     # tesseract_ocr, trocr, llm_transcriber
-  export/            # pagexml, markdown, html_export
-  tools/             # LangChain tools (analysis, layout, transcription, export)
-  agent/             # prompt, callbacks, build_agent
-  gui/               # panel (create_gui_panel_v12, GUIInterface, GUILoggerAdapter, run_with_gui)
-  gui/resources/    # panel_v12.html (full HTML/JS/CSS)
-main.py              # CLI entry
+  config.py             # API key, model names
+  state.py              # ProcessingState
+  logging_utils.py      # RichAgentLogger
+  utils.py              # MIME mapping, JSON cleaning, skew detection
+  detection/
+    assessor.py          # Document quality + content analysis
+    image_enhancer.py    # Deskew, denoise, contrast (OpenCV)
+    region_detector.py   # Gemini vision → region bboxes + types
+    line_detector.py     # Surya DetectionPredictor
+    visualizer.py        # Matplotlib region/line overlay
+  transcription/
+    tesseract_ocr.py     # Tesseract OCR (printed text)
+    trocr.py             # TrOCR HTR (handwriting)
+    llm_transcriber.py   # Gemini vision transcription
+  export/
+    pagexml.py           # PAGE XML 2019 writer
+    markdown.py          # Markdown digital edition
+    html_export.py       # Interactive HTML with overlays
+  tools/                 # LangChain tools (analysis, layout, transcription, export)
+  agent/                 # System prompt, callbacks, build_agent
+  gui/                   # Panel (Jupyter/Colab)
+main.py                  # CLI entry point
 tests/test_line_detector.py
 ```
 
-## Original notebook
+## Tests
 
-The pipeline was extracted from the Jupyter notebook `Agent_Doc_Processing_2026_02_V1 (1).ipynb`. You can keep a thin runner notebook that imports `agentic_doc` and runs the agent + GUI in Colab.
+```bash
+pytest tests/ -v
+```
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Surya returns 0 or 1 line | `pip install 'transformers>=4.56.1,<5'` then restart runtime |
+| `ModuleNotFoundError: agentic_doc` | `pip install -e .` or add `sys.path.insert(0, "src")` |
+| `GOOGLE_API_KEY not set` | Set via env var or Colab Secrets |
+| GUI doesn't show | Run `run_with_gui()` in a notebook cell, not a `.py` script |
+| TrOCR out of memory | Agent falls back to `transcribe_with_llm` automatically |
+
+## License
+
+See individual model licenses (Surya, TrOCR) for model weight usage terms.

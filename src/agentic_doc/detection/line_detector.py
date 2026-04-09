@@ -1,14 +1,28 @@
 """
 Line detection using Surya's DetectionPredictor.
 
-Supports both dict-based and object-based Surya API responses (e.g. surya-ocr 0.17.x and newer).
-Use DETECTOR_BATCH_SIZE, DETECTOR_BLANK_THRESHOLD, DETECTOR_TEXT_THRESHOLD env vars for tuning.
+Detects text lines within each region by cropping from the full image
+and running Surya on each crop.  Coordinates are offset back to
+full-image space.
+
+IMPORTANT: Surya 0.17.x requires ``transformers>=4.56.1,<5``.
+Using transformers 5.x causes the model to produce garbage output.
+The ``pyproject.toml`` pins this dependency correctly.
+
+Supports both dict-based and object-based Surya API responses.
+Env vars: DETECTOR_BATCH_SIZE, DETECTOR_BLANK_THRESHOLD, DETECTOR_TEXT_THRESHOLD.
 """
+
+from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 from PIL import Image
+
+# ---------------------------------------------------------------------------
+# Surya response helpers (dict / object agnostic)
+# ---------------------------------------------------------------------------
 
 
 def _get_bboxes_from_page(page: Any) -> List[Any]:
@@ -19,10 +33,8 @@ def _get_bboxes_from_page(page: Any) -> List[Any]:
 
 
 def _get_polygon_from_bbox(bbox: Any) -> List[List[int]]:
-    """
-    Extract polygon from a single bbox (dict or object).
-    Surya: 4 points clockwise from top-left; normalize to list of [x, y].
-    """
+    """Extract polygon from a single bbox (dict or object).
+    Returns 4 points clockwise from top-left as [[x,y], ...]."""
     if isinstance(bbox, dict):
         raw = bbox.get("polygon", [])
     else:
@@ -39,76 +51,79 @@ def _get_confidence_from_bbox(bbox: Any) -> float:
     return float(getattr(bbox, "confidence", 0.0))
 
 
+# ---------------------------------------------------------------------------
+# LineDetector
+# ---------------------------------------------------------------------------
+
+
 class LineDetector:
     """
-    Line detection using Surya's DetectionPredictor.
-    Detects text line polygons within detected regions.
-    Supports both dict and object Surya API responses for compatibility across versions.
+    Detect text lines within document regions using Surya's DetectionPredictor.
+
+    For each text region the detector crops from the full-page image,
+    runs Surya on the crop, and maps coordinates back to full-image space.
     """
 
     LINE_MARGIN = 0.0005
 
-    def __init__(self, use_layout_fallback: bool = False):
+    def __init__(self, use_layout_fallback: bool = False) -> None:
         self.predictor = None
-        self._layout_predictor = None
-        self._foundation_predictor = None
         self._initialized = False
         self._use_layout_fallback = use_layout_fallback
 
+    # ------------------------------------------------------------------
+    # Lazy init
+    # ------------------------------------------------------------------
+
     def _initialize(self) -> None:
-        """Lazy initialization of Surya DetectionPredictor."""
+        """Lazy-load the Surya DetectionPredictor."""
         if self._initialized:
             return
-        print("Loading Surya detection model...")
-        from surya.detection import DetectionPredictor
-
-        self.predictor = DetectionPredictor()
-        self._initialized = True
-        print("Surya DetectionPredictor loaded")
-
-    def _init_layout_fallback(self) -> None:
-        """Lazy init for layout-based fallback (optional)."""
-        if self._layout_predictor is not None:
-            return
         try:
-            from surya.foundation import FoundationPredictor
-            from surya.layout import LayoutPredictor
-            from surya.settings import settings
+            print("Loading Surya detection model ...")
+            from surya.detection import DetectionPredictor
 
-            self._foundation_predictor = FoundationPredictor(
-                checkpoint=settings.LAYOUT_MODEL_CHECKPOINT
-            )
-            self._layout_predictor = LayoutPredictor(self._foundation_predictor)
+            self.predictor = DetectionPredictor()
+            self._initialized = True
+            print("Surya DetectionPredictor loaded")
         except Exception as e:
-            print(f"Layout fallback not available: {e}")
-            self._use_layout_fallback = False
+            print(f"Surya DetectionPredictor failed to load: {e}")
+            self._initialized = True
+            self.predictor = None
+
+    # ------------------------------------------------------------------
+    # Geometry helpers
+    # ------------------------------------------------------------------
 
     def _add_margin_to_polygon(
         self, polygon: List[List[int]], img_width: int, img_height: int
     ) -> List[List[int]]:
-        """Add small margin to line polygon by expanding outward."""
+        """Slightly expand a polygon outward from its centroid."""
         if not polygon or len(polygon) < 3:
             return polygon
         pts = np.array(polygon, dtype=np.float32)
         centroid = pts.mean(axis=0)
-        margin_factor = 1.0 + self.LINE_MARGIN * 2
-        expanded = centroid + (pts - centroid) * margin_factor
+        factor = 1.0 + self.LINE_MARGIN * 2
+        expanded = centroid + (pts - centroid) * factor
         expanded[:, 0] = np.clip(expanded[:, 0], 0, max(0, img_width - 1))
         expanded[:, 1] = np.clip(expanded[:, 1], 0, max(0, img_height - 1))
         return expanded.astype(int).tolist()
 
-    def _polygon_to_bbox(self, polygon: List[List[int]]) -> Dict[str, int]:
-        """Convert polygon to axis-aligned bounding box."""
+    @staticmethod
+    def _polygon_to_bbox(polygon: List[List[int]]) -> Dict[str, int]:
+        """Convert polygon to axis-aligned bounding box dict."""
         if not polygon:
             return {"x": 0, "y": 0, "width": 0, "height": 0}
-        x_coords = [p[0] for p in polygon]
-        y_coords = [p[1] for p in polygon]
+        xs = [p[0] for p in polygon]
+        ys = [p[1] for p in polygon]
         return {
-            "x": min(x_coords),
-            "y": min(y_coords),
-            "width": max(x_coords) - min(x_coords),
-            "height": max(y_coords) - min(y_coords),
+            "x": min(xs), "y": min(ys),
+            "width": max(xs) - min(xs), "height": max(ys) - min(ys),
         }
+
+    # ------------------------------------------------------------------
+    # Surya output normalisation
+    # ------------------------------------------------------------------
 
     def _normalize_predictions_to_lines(
         self,
@@ -118,19 +133,21 @@ class LineDetector:
         region_bbox: Optional[Dict[str, int]] = None,
         region_id: str = "full_page",
     ) -> List[Dict[str, Any]]:
-        """
-        Normalize Surya output (list of dicts or objects, one per image) to our line format.
-        If region_bbox is set, predictions are in crop coords; we offset to full image.
+        """Convert Surya predictions (one entry per image) into our line format.
+
+        If *region_bbox* is set the predictions are assumed to be in crop
+        coordinates and are offset to full-image space.
         """
         if not predictions:
             return []
         page = predictions[0]
         bboxes = _get_bboxes_from_page(page)
-        lines = []
+        lines: List[Dict[str, Any]] = []
         for i, det_bbox in enumerate(bboxes):
             polygon = _get_polygon_from_bbox(det_bbox)
             if not polygon:
                 continue
+            # offset crop coords → full image
             if region_bbox is not None:
                 polygon = [
                     [pt[0] + region_bbox["x"], pt[1] + region_bbox["y"]]
@@ -139,7 +156,11 @@ class LineDetector:
             margined = self._add_margin_to_polygon(polygon, img_width, img_height)
             line_bbox = self._polygon_to_bbox(margined)
             conf = _get_confidence_from_bbox(det_bbox)
-            line_id = f"{region_id}_line_{i + 1:03d}" if region_id != "full_page" else f"line_{i + 1:03d}"
+            line_id = (
+                f"{region_id}_line_{i + 1:03d}"
+                if region_id != "full_page"
+                else f"line_{i + 1:03d}"
+            )
             lines.append({
                 "id": line_id,
                 "polygon": margined,
@@ -149,58 +170,35 @@ class LineDetector:
         lines.sort(key=lambda l: (l["bbox"]["y"], l["bbox"]["x"]))
         return lines
 
-    def _detect_with_layout_fallback(
-        self, image: Image.Image, img_width: int, img_height: int
-    ) -> List[Dict[str, Any]]:
-        """Use Layout model bboxes as line-level boxes when detection returns nothing."""
-        self._init_layout_fallback()
-        if self._layout_predictor is None:
-            return []
-        try:
-            layout_predictions = self._layout_predictor([image])
-            if not layout_predictions:
-                return []
-            page = layout_predictions[0]
-            bboxes = _get_bboxes_from_page(page)
-            lines = []
-            for i, lb in enumerate(bboxes):
-                polygon = _get_polygon_from_bbox(lb)
-                if not polygon:
-                    continue
-                margined = self._add_margin_to_polygon(polygon, img_width, img_height)
-                line_bbox = self._polygon_to_bbox(margined)
-                conf = _get_confidence_from_bbox(lb)
-                lines.append({
-                    "id": f"line_{i + 1:03d}",
-                    "polygon": margined,
-                    "bbox": line_bbox,
-                    "confidence": conf,
-                })
-            lines.sort(key=lambda l: (l["bbox"]["y"], l["bbox"]["x"]))
-            return lines
-        except Exception as e:
-            print(f"Layout fallback failed: {e}")
-            return []
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def detect(
         self, image_path: str, regions: Optional[List[Dict]] = None
     ) -> Dict[str, Any]:
-        """
-        Detect text lines within regions using Surya DetectionPredictor.
-        If regions is None, detects on the full image.
-        Normalizes both dict and object Surya responses.
+        """Detect text lines.
+
+        If *regions* is ``None``, detect on the full image.
+        Otherwise crop each region and run Surya on the crop.
         """
         self._initialize()
+        if self.predictor is None:
+            return {
+                "status": "error",
+                "error": "Surya DetectionPredictor not available. "
+                         "Install surya-ocr and transformers>=4.56.1,<5.",
+            }
+
         image = Image.open(image_path).convert("RGB")
         img_width, img_height = image.size
 
+        # ---- full-page mode (no regions) ----
         if not regions:
             predictions = self.predictor([image])
             lines = self._normalize_predictions_to_lines(
-                predictions, img_width, img_height, region_bbox=None, region_id="full_page"
+                predictions, img_width, img_height,
             )
-            if not lines and self._use_layout_fallback:
-                lines = self._detect_with_layout_fallback(image, img_width, img_height)
             return {
                 "status": "success",
                 "tool": "surya",
@@ -215,70 +213,42 @@ class LineDetector:
                 "total_lines": len(lines),
             }
 
-        results = []
+        # ---- per-region crop mode ----
+        _skip_types = {"ImageRegion", "DiagramRegion", "DecorationRegion"}
+        results: List[Dict[str, Any]] = []
         total_lines = 0
-        for region in regions:
-            region_bbox = region.get("bbox")
-            if not region_bbox:
-                results.append({**region, "lines": [], "line_count": 0})
-                continue
-            region_type = region.get("type", "TextRegion")
-            if region_type in ("ImageRegion", "DiagramRegion"):
-                results.append({**region, "lines": [], "line_count": 0})
+
+        for i, region in enumerate(regions):
+            rid = region.get("id", f"region_{i + 1:03d}")
+            rtype = region.get("type", "TextRegion")
+            rbbox = region.get("bbox")
+
+            # skip non-text / invalid regions
+            if not rbbox or rtype in _skip_types:
+                results.append(self._build_region(region, i, []))
                 continue
 
             crop = image.crop((
-                region_bbox["x"],
-                region_bbox["y"],
-                region_bbox["x"] + region_bbox["width"],
-                region_bbox["y"] + region_bbox["height"],
+                rbbox["x"], rbbox["y"],
+                rbbox["x"] + rbbox["width"],
+                rbbox["y"] + rbbox["height"],
             ))
             if crop.width < 10 or crop.height < 10:
-                results.append({**region, "lines": [], "line_count": 0})
+                results.append(self._build_region(region, i, []))
                 continue
 
             try:
                 predictions = self.predictor([crop])
             except Exception as e:
-                print(f"Line detection failed for region {region.get('id', 'unknown')}: {e}")
-                results.append({**region, "lines": [], "line_count": 0})
+                print(f"Line detection failed for region {rid}: {e}")
+                results.append(self._build_region(region, i, []))
                 continue
 
             lines = self._normalize_predictions_to_lines(
-                predictions,
-                img_width,
-                img_height,
-                region_bbox=region_bbox,
-                region_id=region.get("id", "region"),
+                predictions, img_width, img_height,
+                region_bbox=rbbox, region_id=rid,
             )
-            if not lines and self._use_layout_fallback:
-                lines_crop = self._detect_with_layout_fallback(crop, crop.width, crop.height)
-                lines = []
-                for j, ln in enumerate(lines_crop):
-                    bbox = ln["bbox"]
-                    poly = ln["polygon"]
-                    lines.append({
-                        "id": f"{region.get('id', 'region')}_line_{j + 1:03d}",
-                        "polygon": [[p[0] + region_bbox["x"], p[1] + region_bbox["y"]] for p in poly],
-                        "bbox": {
-                            "x": bbox["x"] + region_bbox["x"],
-                            "y": bbox["y"] + region_bbox["y"],
-                            "width": bbox["width"],
-                            "height": bbox["height"],
-                        },
-                        "confidence": ln["confidence"],
-                    })
-
-            results.append({
-                "id": region.get("id", "region"),
-                "type": region_type,
-                "bbox": region_bbox,
-                "reading_order": region.get("reading_order", 0),
-                "confidence": region.get("confidence", 0.9),
-                "description": region.get("description", ""),
-                "lines": lines,
-                "line_count": len(lines),
-            })
+            results.append(self._build_region(region, i, lines))
             total_lines += len(lines)
 
         return {
@@ -287,4 +257,23 @@ class LineDetector:
             "image_path": image_path,
             "regions": results,
             "total_lines": total_lines,
+        }
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_region(
+        region: Dict, index: int, lines: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        return {
+            "id": region.get("id", f"region_{index + 1:03d}"),
+            "type": region.get("type", "TextRegion"),
+            "bbox": region.get("bbox", {}),
+            "reading_order": region.get("reading_order", index + 1),
+            "confidence": region.get("confidence", 0.9),
+            "description": region.get("description", ""),
+            "lines": lines,
+            "line_count": len(lines),
         }

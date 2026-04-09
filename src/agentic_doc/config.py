@@ -23,7 +23,7 @@ def load_config():
         os.environ["GOOGLE_API_KEY"] = api_key
     return {
         "GOOGLE_API_KEY": api_key,
-        "AGENT_MODEL": os.environ.get("AGENT_MODEL", "gemini-2.0-flash"),
+        "AGENT_MODEL": os.environ.get("AGENT_MODEL", "gemini-2.5-flash"),
         "VISION_MODEL": os.environ.get("VISION_MODEL", "gemini-3-flash-preview"),
         "USE_LAYOUT_FALLBACK": os.environ.get("USE_LAYOUT_FALLBACK", "").lower() in ("1", "true", "yes"),
     }
