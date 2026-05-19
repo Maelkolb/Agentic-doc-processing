@@ -32,12 +32,9 @@ A Gemini API key is required. The config layer accepts it from any of the source
 | Source | How to set |
 | --- | --- |
 | `GEMINI_API_KEY` env var | `os.environ["GEMINI_API_KEY"] = "..."` |
-| `GOOGLE_API_KEY` env var | `os.environ["GOOGLE_API_KEY"] = "..."` |
-| Colab secret named by `COLAB_GEMINI_SECRET` | `os.environ["COLAB_GEMINI_SECRET"] = "LST_Gemini"` |
 | Colab secret `GEMINI_API_KEY` or `GOOGLE_API_KEY` | left sidebar 🔑 |
 | Explicit argument | `build_agent(api_key="...")` |
 
-Whichever source matches, the key is normalized to `GOOGLE_API_KEY` and `GEMINI_API_KEY` is cleared from the process, so you will not see the `google_genai` "Both GOOGLE_API_KEY and GEMINI_API_KEY are set" warning.
 
 ## CLI
 
