@@ -100,7 +100,7 @@ class GUIInterface:
             print(f"   ✅ Image loaded: {os.path.basename(path)}")
             return True
         except Exception as e:
-            print(f"   ❌ Failed to load image2: {e}")
+            print(f"   ❌ Failed to load image: {e}")
             return False
 
     def set_regions(self, regions: List[Dict]) -> None:
@@ -194,10 +194,13 @@ class GUILoggerAdapter:
         def hooked_log(level: Any, content: Any, **kwargs: Any) -> Any:
             result = adapter._original_log(level, content, **kwargs)
             level_str = level.value if hasattr(level, "value") else str(level)
-            h = hashlib.md5(f"{level_str}:{str(content)[:150]}".encode()).hexdigest()[:12]
-            if h in adapter._seen:
-                return result
-            adapter._seen.add(h)
+            # Don't dedupe phase events — every transition needs to reach the GUI
+            # even if the same phase name comes through more than once.
+            if level_str not in ("phase_start", "phase_end"):
+                h = hashlib.md5(f"{level_str}:{str(content)[:150]}".encode()).hexdigest()[:12]
+                if h in adapter._seen:
+                    return result
+                adapter._seen.add(h)
             ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
             if level_str in ("tool_start", "tool_end", "action"):
                 match = re.search(r"(\w+)", str(content))
@@ -234,15 +237,19 @@ def run_with_gui(
     """
     from langchain_core.messages import HumanMessage
 
+    # Build a RunnableConfig. NOTE: `callbacks` is a top-level key on
+    # RunnableConfig (sibling of `configurable`). Putting it under
+    # `configurable` silently discards it — that was the cause of the
+    # phase bar getting stuck at "Init", because StreamingAgentCallback
+    # never fired, and the per-tool phase transitions never happened.
     config = dict(config or {})
-    if "configurable" not in config:
-        config["configurable"] = {}
+    config.setdefault("configurable", {})
     if callbacks is not None:
-        config["configurable"]["callbacks"] = callbacks
-    elif not config["configurable"].get("callbacks") and hasattr(logger, "log"):
+        config["callbacks"] = callbacks
+    elif not config.get("callbacks") and hasattr(logger, "log"):
         try:
             from ..agent.callbacks import StreamingAgentCallback
-            config["configurable"]["callbacks"] = [StreamingAgentCallback(logger)]
+            config["callbacks"] = [StreamingAgentCallback(logger)]
         except Exception:
             pass
 
