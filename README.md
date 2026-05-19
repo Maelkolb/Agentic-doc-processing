@@ -1,61 +1,72 @@
 # Agentic Document Processing
 
-A LangChain / LangGraph-powered pipeline that turns a document image into structured output (PageXML, Markdown, HTML). An AI agent drives every step — assessment, layout analysis, OCR/HTR, and export — choosing the right tools automatically.
+A LangChain / LangGraph pipeline that converts a document image into PageXML, Markdown, and HTML. The agent picks the right OCR / HTR tool per region (Tesseract, TrOCR, or Gemini vision) based on a layout pass with Surya plus Gemini.
 
-## What it does
+## Pipeline
 
-1. **Assess** the document (quality metrics via CV, content analysis via Gemini vision).
-2. **Enhance** the image if needed (deskew, denoise, contrast — OpenCV).
-3. **Detect regions** (paragraphs, headings, tables, marginalia — Gemini vision).
-4. **Detect text lines** inside each region (Surya DetectionPredictor).
-5. **Transcribe** every region with the best tool (Tesseract for print, TrOCR for handwriting, Gemini vision for complex layouts / Kurrent / tables).
-6. **Export** to PAGE XML 2019, Markdown digital edition, and interactive HTML.
+1. Assess image quality (OpenCV) and content (Gemini vision).
+2. Optionally enhance the image — deskew, denoise, contrast.
+3. Detect regions: paragraphs, headings, tables, marginalia (Gemini vision).
+4. Detect text-line polygons inside each region (Surya `DetectionPredictor`).
+5. Transcribe each region with Tesseract, TrOCR, or Gemini vision.
+6. Export to PAGE XML 2019, Markdown, and an interactive HTML viewer.
 
-## Quick start — Google Colab
+## Install
 
-### 1. Install
-
-```python
-# Clone the repo (or upload the zip and unzip it)
-!git clone https://github.com/Maelkolb/Agentic-doc-processing.git
-%cd Agentic-doc-processing
-
-# Install the package
-!pip install -e ".[tesseract,trocr]"
-
-# Ensure importable
-import sys, os
-sys.path.insert(0, os.path.join(os.getcwd(), "src"))
+```bash
+git clone https://github.com/Maelkolb/Agentic-doc-processing.git
+cd Agentic-doc-processing
+pip install -e ".[tesseract,trocr]"
 ```
 
-> **Important:** The package pins `transformers>=4.56.1,<5` because Surya 0.17.x is incompatible with `transformers 5.x`. If Colab pre-installs `transformers 5.x`, the `pip install -e .` will automatically downgrade it. If you see Surya returning 0 lines, run `pip install 'transformers>=4.56.1,<5'` and **restart the runtime**.
+Surya 0.17.x requires `transformers >= 4.56.1, < 5`. The pin is in `pyproject.toml`, but if Surya returns zero or one line you are probably on `transformers 5.x`. Fix it and restart the runtime:
 
-### 2. Set your Gemini API key
-
-Add a Colab Secret named `GEMINI_API_KEY` (sidebar 🔑), or:
-
-```python
-os.environ["GOOGLE_API_KEY"] = "your-key-here"
+```bash
+pip install 'transformers>=4.56.1,<5'
 ```
 
-### 3. Upload an image and run
+## API key
 
-```python
-from google.colab import files
-uploaded = files.upload()
-image_path = list(uploaded.keys())[0]
+A Gemini API key is required. The config layer accepts it from any of the sources below, in order:
+
+| Source | How to set |
+| --- | --- |
+| `GEMINI_API_KEY` env var | `os.environ["GEMINI_API_KEY"] = "..."` |
+| `GOOGLE_API_KEY` env var | `os.environ["GOOGLE_API_KEY"] = "..."` |
+| Colab secret named by `COLAB_GEMINI_SECRET` | `os.environ["COLAB_GEMINI_SECRET"] = "LST_Gemini"` |
+| Colab secret `GEMINI_API_KEY` or `GOOGLE_API_KEY` | left sidebar 🔑 |
+| Explicit argument | `build_agent(api_key="...")` |
+
+Whichever source matches, the key is normalized to `GOOGLE_API_KEY` and `GEMINI_API_KEY` is cleared from the process, so you will not see the `google_genai` "Both GOOGLE_API_KEY and GEMINI_API_KEY are set" warning.
+
+## CLI
+
+```bash
+python main.py path/to/document.png
+python main.py path/to/document.png --no-gui
 ```
 
-**With GUI:**
+| Flag | Default | Description |
+| --- | --- | --- |
+| `image_path` | required | Path to the document image |
+| `--no-gui` | off | Run headless — no Jupyter / Colab panel |
+| `--no-callbacks` | off | Disable streaming log callbacks |
+
+## Colab / Jupyter
+
 ```python
+import os
+os.environ["GEMINI_API_KEY"] = "..."   # or use a Colab secret
+
 from agentic_doc.agent import build_agent
 from agentic_doc.gui import run_with_gui
 
 agent, state, logger = build_agent()
-run_with_gui(agent, state, logger, image_path)
+run_with_gui(agent, state, logger, "path/to/document.png")
 ```
 
-**Headless:**
+Headless inside a notebook:
+
 ```python
 from langchain_core.messages import HumanMessage
 from agentic_doc.agent import build_agent
@@ -63,87 +74,36 @@ from agentic_doc.agent.callbacks import StreamingAgentCallback
 
 agent, state, logger = build_agent()
 result = agent.invoke(
-    {"messages": [HumanMessage(content=(
-        f"Process this document image completely: {image_path}\n\n"
-        "Follow the full pipeline: assess, enhance if recommended, detect regions, "
-        "detect lines, get transcription plan, transcribe every text region "
-        "(use transcribe_with_llm for tables and images), compile transcription, "
-        "then export to PageXML, Markdown, and HTML."
-    ))]},
+    {"messages": [HumanMessage(content=f"Process this document image completely: {image_path}")]},
     config={"configurable": {"callbacks": [StreamingAgentCallback(logger)]}},
 )
 ```
 
-## Quick start — Local (VS Code / CLI)
-
-```bash
-git clone https://github.com/YOUR_USER/Agentic-doc-processing.git
-cd Agentic-doc-processing
-pip install -e ".[tesseract,trocr]"
-export GOOGLE_API_KEY="your-gemini-key"
-
-# CLI
-python main.py path/to/document.png
-python main.py path/to/document.png --no-gui
-```
-
-## Surya line detection
-
-Surya's `DetectionPredictor` detects text line polygons within each region. For each region the detector crops from the full-page image, runs inference on the crop, and maps coordinates back to full-image space.
-
-### Critical: transformers version
-
-Surya 0.17.x requires `transformers>=4.56.1,<5`. With `transformers 5.x` the model loads but outputs garbage (zero or one bbox for the entire image). This is pinned correctly in `pyproject.toml`. If your environment has `transformers 5.x` already installed, run:
-
-```bash
-pip install 'transformers>=4.56.1,<5'
-```
-
-and **restart your Python runtime**.
-
-### Tuning
-
-| Variable | Default | Effect |
-|----------|---------|--------|
-| `DETECTOR_BATCH_SIZE` | `36` (GPU) | GPU VRAM vs speed |
-| `DETECTOR_BLANK_THRESHOLD` | `0.35` | Lower → more sensitive to gaps between lines |
-| `DETECTOR_TEXT_THRESHOLD` | `0.6` | Higher → lines merge less |
-
 ## Configuration
 
 | Env variable | Default | Purpose |
-|-------------|---------|---------|
-| `GOOGLE_API_KEY` | — | **Required.** Gemini API key |
-| `AGENT_MODEL` | `gemini-2.0-flash` | LLM for agent tool calling |
-| `VISION_MODEL` | `gemini-3-flash-preview` | LLM for vision tasks |
+| --- | --- | --- |
+| `GEMINI_API_KEY` / `GOOGLE_API_KEY` | — | Gemini API key (required) |
+| `COLAB_GEMINI_SECRET` | — | Name of the Colab secret holding the key |
+| `AGENT_MODEL` | `gemini-2.5-flash` | Model for agent tool calling |
+| `VISION_MODEL` | `gemini-3-flash-preview` | Model for vision tasks |
+| `USE_LAYOUT_FALLBACK` | `false` | Use the fallback layout detector if Surya fails |
 
 ## Project layout
 
 ```
 src/agentic_doc/
-  config.py             # API key, model names
-  state.py              # ProcessingState
-  logging_utils.py      # RichAgentLogger
-  utils.py              # MIME mapping, JSON cleaning, skew detection
-  detection/
-    assessor.py          # Document quality + content analysis
-    image_enhancer.py    # Deskew, denoise, contrast (OpenCV)
-    region_detector.py   # Gemini vision → region bboxes + types
-    line_detector.py     # Surya DetectionPredictor
-    visualizer.py        # Matplotlib region/line overlay
-  transcription/
-    tesseract_ocr.py     # Tesseract OCR (printed text)
-    trocr.py             # TrOCR HTR (handwriting)
-    llm_transcriber.py   # Gemini vision transcription
-  export/
-    pagexml.py           # PAGE XML 2019 writer
-    markdown.py          # Markdown digital edition
-    html_export.py       # Interactive HTML with overlays
-  tools/                 # LangChain tools (analysis, layout, transcription, export)
-  agent/                 # System prompt, callbacks, build_agent
-  gui/                   # Panel (Jupyter/Colab)
-main.py                  # CLI entry point
-tests/test_line_detector.py
+  config.py          API key + model selection
+  state.py           Pipeline state container
+  logging_utils.py   Rich-based logger
+  detection/         Quality assessment, image enhancement, region + line detection
+  transcription/     Tesseract, TrOCR, Gemini-vision transcribers
+  export/            PageXML 2019, Markdown, HTML writers
+  tools/             LangChain tool wrappers
+  agent/             System prompt, callbacks, build_agent
+  gui/               Panel-based Jupyter / Colab viewer
+main.py              CLI entry point
+tests/               pytest suite
 ```
 
 ## Tests
@@ -155,13 +115,13 @@ pytest tests/ -v
 ## Troubleshooting
 
 | Problem | Fix |
-|---------|-----|
-| Surya returns 0 or 1 line | `pip install 'transformers>=4.56.1,<5'` then restart runtime |
-| `ModuleNotFoundError: agentic_doc` | `pip install -e .` or add `sys.path.insert(0, "src")` |
-| `GOOGLE_API_KEY not set` | Set via env var or Colab Secrets |
-| GUI doesn't show | Run `run_with_gui()` in a notebook cell, not a `.py` script |
-| TrOCR out of memory | Agent falls back to `transcribe_with_llm` automatically |
+| --- | --- |
+| Surya returns 0 or 1 line | `pip install 'transformers>=4.56.1,<5'`, then restart the runtime |
+| `ModuleNotFoundError: agentic_doc` | `pip install -e .` or `sys.path.insert(0, "src")` |
+| `GOOGLE_API_KEY not set` | See the **API key** section above |
+| `Both GOOGLE_API_KEY and GEMINI_API_KEY are set` warning | Update to the current `config.py` — only one env var is left set after `load_config()` runs |
+| TrOCR runs out of memory | The agent automatically falls back to `transcribe_with_llm` |
 
 ## License
 
-See individual model licenses (Surya, TrOCR) for model weight usage terms.
+Each bundled model has its own license (Surya, TrOCR). Check those before deploying.
