@@ -17,7 +17,7 @@ A LangChain / LangGraph-powered pipeline that turns a document image into struct
 
 ```python
 # Clone the repo (or upload the zip and unzip it)
-!git clone https://github.com/YOUR_USER/Agentic-doc-processing.git
+!git clone https://github.com/Maelkolb/Agentic-doc-processing.git
 %cd Agentic-doc-processing
 
 # Install the package
